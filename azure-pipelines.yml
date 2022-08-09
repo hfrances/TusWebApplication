@@ -123,6 +123,14 @@ jobs:
               $description = "$($xml.Project.PropertyGroup.Description)".Trim();
               write-output "Description: $description";
               write-output "##vso[task.setvariable variable=MainProject.Description]$description";
+
+              if ($version) {
+                $sufix = ".v$version";
+              }
+              else {
+                $sufix = "";
+              }
+              write-output "##vso[task.setvariable variable=BuildParameters.OutputFile]$packageName$sufix.tar.gz";
             }
      
       - task: PowerShell@2
