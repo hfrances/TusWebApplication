@@ -1,6 +1,11 @@
 ﻿using Azure.Storage.Blobs.Specialized;
+using System;
+using System.Collections.Generic;
+using System.IO;
 using System.IO.Pipelines;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 using tusdotnet.Interfaces;
 using tusdotnet.Models;
 
@@ -31,7 +36,7 @@ namespace TusWebApplication
 
         Azure.Storage.Blobs.BlobServiceClient BlobService { get; }
         string DefaultContainer { get; }
-        Dictionary<string, BlobInfo> Blobs { get; } = new();
+        Dictionary<string, BlobInfo> Blobs { get; } = new Dictionary<string, BlobInfo>();
 
 
         public TusAzureStore(string accountName, string accountKey, string defaultContainer)
@@ -40,6 +45,12 @@ namespace TusWebApplication
             var blobUri = new Uri($"https://{accountName}.blob.core.windows.net");
 
             this.BlobService = new Azure.Storage.Blobs.BlobServiceClient(blobUri, credentials);
+            this.DefaultContainer = defaultContainer;
+        }
+
+        public TusAzureStore(Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer)
+        {
+            this.BlobService = blobService;
             this.DefaultContainer = defaultContainer;
         }
 
@@ -112,7 +123,7 @@ namespace TusWebApplication
                 var blobId = $"{containerName}/{blobName}";
                 var blob = container.GetBlockBlobClient(blobName);
 
-                Blobs.Add(blobId, new(containerName, metadata, uploadLength, blob));
+                Blobs.Add(blobId, new BlobInfo(containerName, metadata, uploadLength, blob));
                 return Task.FromResult(blobId);
             }
         }
@@ -120,9 +131,8 @@ namespace TusWebApplication
         public Task<bool> FileExistAsync(string fileId, CancellationToken cancellationToken)
         {
             bool rdo;
-            BlobInfo? blobInfo;
 
-            if (Blobs.TryGetValue(fileId, out blobInfo))
+            if (Blobs.TryGetValue(fileId, out BlobInfo? blobInfo))
             {
                 var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
                 var blob = container.GetBlobClient(fileId);
