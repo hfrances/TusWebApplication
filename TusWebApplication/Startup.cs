@@ -10,6 +10,7 @@ using tusdotnet;
 using tusdotnet.Interfaces;
 using tusdotnet.Models;
 using tusdotnet.Stores;
+using TusWebApplication.Application;
 using TusWebApplication.Swagger;
 
 namespace TusWebApplication
@@ -29,10 +30,8 @@ namespace TusWebApplication
 
             services.AddCors(opts => opts.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-            // Add services to the container.
+            services.AddApplication();
             services.AddControllers();
-            
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             services.AddSwagger();
         }
 
@@ -45,9 +44,7 @@ namespace TusWebApplication
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI();
             }
-            //app.UseHttpsRedirection();
 
             app.UseRouting();
             app.UseAuthorization();
@@ -67,7 +64,7 @@ namespace TusWebApplication
                 // c:\tusfiles is where to store files
                 Store = store,
                 // On what url should we listen for uploads?
-                UrlPath = "/files",
+                UrlPath = "/api/files",
                 MetadataParsingStrategy = MetadataParsingStrategy.AllowEmptyValues,
                 UsePipelinesIfAvailable = true,
                 Events = new tusdotnet.Models.Configuration.Events
@@ -97,12 +94,12 @@ namespace TusWebApplication
                 {
                     await context.Response.WriteAsync("Hello World!");
                 });
-                endpoints.MapGet("/files/{fileId}", async context =>
-                {
-                    context.Response.StatusCode = 501;
-                    await context.Response.WriteAsync("Method Not Implemented");
-                    return;
-                });
+                //endpoints.MapGet("/files/{fileId}", async context =>
+                //{
+                //    context.Response.StatusCode = 501;
+                //    await context.Response.WriteAsync("Method Not Implemented");
+                //    return;
+                //});
             });
         }
     }

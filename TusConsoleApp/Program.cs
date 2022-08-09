@@ -8,8 +8,9 @@ const int ServerPort = 5000;
 
 System.Threading.Thread.Sleep(2000);
 
-var serverUrl = string.Format("http://{0}:{1}/files/", ServerAddress, ServerPort);
-var file = new FileInfo(@"C:\Users\hfrances\Downloads\Docker Desktop Installer.exe");
+var serverUrl = string.Format("http://{0}:{1}/api/files/", ServerAddress, ServerPort);
+var file = new FileInfo(@"C:\Users\hfrances\Downloads\multipass-1.9.0+win-win64.exe");
+var file2 = new FileInfo(@"C:\Users\hfrances\Downloads\Docker Desktop Installer.exe");
 
 /* Upload file */
 var stw = System.Diagnostics.Stopwatch.StartNew();
