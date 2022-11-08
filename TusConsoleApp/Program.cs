@@ -17,7 +17,7 @@ var stw = System.Diagnostics.Stopwatch.StartNew();
 var client = new TusDotNetClient.TusClient();
 var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
    new("container", "other"),
-   new("factor", "1,2")
+   new("META:factor", "1,2")
 });
 var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
 

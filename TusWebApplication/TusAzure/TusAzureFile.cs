@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using tusdotnet.Interfaces;
 using tusdotnet.Models;
 
-namespace TusWebApplication
+namespace TusWebApplication.TusAzure
 {
     public sealed class TusAzureFile : ITusFile
     {

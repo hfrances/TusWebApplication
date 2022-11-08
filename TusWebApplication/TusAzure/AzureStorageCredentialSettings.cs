@@ -1,4 +1,5 @@
-﻿namespace TusWebApplication
+﻿
+namespace TusWebApplication.TusAzure
 {
     sealed class AzureStorageCredentialSettings
     {

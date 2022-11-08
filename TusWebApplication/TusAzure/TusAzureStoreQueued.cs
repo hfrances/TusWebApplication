@@ -2,99 +2,33 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Pipelines;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using tusdotnet.Interfaces;
 using tusdotnet.Models;
 
-namespace TusWebApplication
+namespace TusWebApplication.TusAzure
 {
-    sealed class TusAzureStoreQueued : ITusStore, ITusCreationStore, ITusTerminationStore, ITusReadableStore
+    sealed class TusAzureStoreQueued : TusAzureStore, ITusStore, ITusCreationStore, ITusTerminationStore, ITusReadableStore
     {
 
-        private enum QueueItemStatus
-        {
-            Waiting, Started, Done
-        }
-
-        private class QueueItem
-        {
-            public string Name { get; }
-            public Stream? Stream { get; set; }
-            public long Length { get; set; }
-            public QueueItemStatus Status { get; set; }
-
-            public QueueItem(string name, Stream stream, long length)
-            {
-                this.Name = name;
-                this.Stream = stream;
-                this.Length = length;
-            }
-
-        }
-
-        private class BlobInfo
-        {
-            public string FileId { get; }
-            public string ContainerName { get; }
-            public string Metadata { get; }
-            public long UploadLength { get; }
-            public BlockBlobClient Blob { get; }
-            public IList<string> BlockNames { get; }
-                = new List<string>();
-            public IList<QueueItem> Queue { get; }
-                = new List<QueueItem>();
-            public long SizeOffset { get; set; }
-            public long SizeOffsetInternal { get; set; }
-            public DateTime? StartTime { get; set; }
-            public HashAlgorithm Hasher { get; }
-
-            public BlobInfo(string fileId, string containerName, string metadata, long uploadLength, BlockBlobClient blob)
-            {
-                this.FileId = fileId;
-                this.ContainerName = containerName;
-                this.Metadata = metadata;
-                this.UploadLength = uploadLength;
-                this.Blob = blob;
-
-                this.Hasher = MD5.Create();
-                Hasher.Initialize();
-            }
-
-        }
-
-        Azure.Storage.Blobs.BlobServiceClient BlobService { get; }
-        string DefaultContainer { get; }
-        Dictionary<string, BlobInfo> Blobs { get; } = new Dictionary<string, BlobInfo>();
-
-
         public TusAzureStoreQueued(string accountName, string accountKey, string defaultContainer)
-        {
-            var credentials = new Azure.Storage.StorageSharedKeyCredential(accountName, accountKey);
-            var blobUri = new Uri($"https://{accountName}.blob.core.windows.net");
-
-            this.BlobService = new Azure.Storage.Blobs.BlobServiceClient(blobUri, credentials);
-            this.DefaultContainer = defaultContainer;
-        }
+            : base(accountName, accountKey, defaultContainer)
+        { }
 
         public TusAzureStoreQueued(Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer)
-        {
-            this.BlobService = blobService;
-            this.DefaultContainer = defaultContainer;
-        }
+            : base(blobService, defaultContainer)
+        { }
 
-        public async Task<long> AppendDataAsync(string fileId, Stream stream, CancellationToken cancellationToken)
+        public override async Task<long> AppendDataAsync(string fileId, Stream stream, CancellationToken cancellationToken)
         {
 
             try
             {
                 var threadId = Guid.NewGuid().ToString()[..8];
                 var blobInfo = Blobs[fileId];
-                var blockId = $"{Convert.ToBase64String(Encoding.UTF8.GetBytes(blobInfo.BlockNames.Count.ToString("d6")))}";
+                var blockId = $"{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(blobInfo.BlockNames.Count.ToString("d6")))}";
                 long length = 0;
 
                 // Iniciar el contador de tiempo.
@@ -150,6 +84,7 @@ namespace TusWebApplication
                                       block.Stream = null;
                                       block.Status = QueueItemStatus.Done;
                                       Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
+                                      GC.Collect();
                                   }
                               }
                           }
@@ -163,35 +98,25 @@ namespace TusWebApplication
                               if (blobInfo.SizeOffset == blobInfo.UploadLength)
                               {
                                   blobInfo.Hasher.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
-                                  var contentHash = blobInfo.Hasher.Hash;
+
+                                  // Commit.
+                                  var commitOptions = TusAzureHelper.CreateCommitBlockListOptions(blobInfo);
+                                  var contentHash = commitOptions.HttpHeaders.ContentHash;
 
                                   Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. Hash: {Convert.ToBase64String(contentHash ?? new byte[] { })}. Commiting...");
-
-                                  var commitOptions = new Azure.Storage.Blobs.Models.CommitBlockListOptions()
-                                  {
-                                      Tags = new Dictionary<string, string>(),
-                                      Metadata = new Dictionary<string, string>(),
-                                      HttpHeaders = new Azure.Storage.Blobs.Models.BlobHttpHeaders()
-                                      {
-                                          ContentHash = contentHash
-                                      }
-                                  };
-                                  var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, blobInfo.Metadata).Metadata;
-                                  var fileName = metadataParsed["filename"].GetString(System.Text.Encoding.UTF8);
-                                  var container = metadataParsed["container"].GetString(System.Text.Encoding.UTF8);
-                                  var factor = metadataParsed["factor"].GetString(System.Text.Encoding.UTF8);
-
-                                  commitOptions.Tags.Add("filename", fileName);
-                                  commitOptions.Metadata.Add("factor", factor);
                                   await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
                                   Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
 
-                                  var container2 = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
-                                  var blob = container2.GetBlobClient(blobInfo.FileId);
+                                  // Validate.
+                                  var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
+                                  var blob = container.GetBlobClient(blobInfo.BlobName);
+
+                                  blob.GetHashCode();
                               }
                           }
-                          catch (Exception)
+                          catch (Exception ex)
                           {
+                              Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
                               throw;
                           }
                       }, cancellationToken);
@@ -202,111 +127,6 @@ namespace TusWebApplication
             {
                 throw;
             }
-        }
-
-        public Task<string> CreateFileAsync(long uploadLength, string metadata, CancellationToken cancellationToken)
-        {
-            var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, metadata)?.Metadata;
-            string containerName;
-
-            if (metadataParsed?.TryGetValue("container", out Metadata? value) == true)
-            {
-                containerName = value.GetString(System.Text.Encoding.UTF8);
-            }
-            else
-            {
-                containerName = this.DefaultContainer;
-            }
-
-            var container = BlobService.GetBlobContainerClient(containerName);
-
-            if (container == null)
-            {
-                throw new Exception($"Container with name '{containerName}' not found.");
-            }
-            else
-            {
-                var blobName = Guid.NewGuid().ToString();
-                var blobId = $"{containerName}/{blobName}";
-                var blob = container.GetBlockBlobClient(blobName);
-
-                Blobs.Add(blobId, new BlobInfo(blobId, containerName, metadata, uploadLength, blob));
-                return Task.FromResult(blobId);
-            }
-        }
-
-        public Task<bool> FileExistAsync(string fileId, CancellationToken cancellationToken)
-        {
-            bool rdo;
-
-            if (Blobs.TryGetValue(fileId, out BlobInfo? blobInfo))
-            {
-                var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
-                var blob = container.GetBlobClient(fileId);
-
-                rdo = (blob != null);
-            }
-            else
-            {
-                rdo = false;
-            }
-            return Task.FromResult(rdo);
-        }
-
-        public Task<long?> GetUploadLengthAsync(string fileId, CancellationToken cancellationToken)
-        {
-            return Task.FromResult((long?)Blobs[fileId].UploadLength);
-        }
-
-        public Task<string> GetUploadMetadataAsync(string fileId, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(Blobs[fileId].Metadata);
-        }
-
-        public Task<long> GetUploadOffsetAsync(string fileId, CancellationToken cancellationToken)
-        {
-            return Task.FromResult(Blobs[fileId].SizeOffset);
-        }
-
-        public Task<ITusFile> GetFileAsync(string fileId, CancellationToken cancellationToken)
-        {
-            var blobId = fileId.Split('/');
-
-            if (blobId.Length == 2)
-            {
-                var containerName = blobId[0];
-                var blobName = blobId[1];
-                var container = BlobService.GetBlobContainerClient(containerName);
-
-                if (container == null)
-                {
-                    throw new KeyNotFoundException($"Container '{containerName}' not found in blob storage.");
-                }
-                else
-                {
-                    var blob = container.GetBlobClient(blobName);
-
-                    if (blob == null)
-                    {
-                        throw new KeyNotFoundException($"Blob '{blobName}' not found in container '{containerName}'.");
-                    }
-                    else
-                    {
-                        var file = new TusAzureFile(blob);
-
-                        return Task.FromResult<ITusFile>(file);
-                    }
-                }
-            }
-            else
-            {
-                throw new FormatException("Invalid format for FileId.");
-            }
-        }
-
-        public Task DeleteFileAsync(string fileId, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
         }
 
     }
