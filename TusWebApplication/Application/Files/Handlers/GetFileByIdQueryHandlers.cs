@@ -67,10 +67,10 @@ namespace TusWebApplication.Application.Files.Handlers
             return new FileDto
             {
                 BlobId = $"{container.Name}/{blob.Name}",
-                Name = tags.SingleOrDefault(x => x.Key.Equals("filename", System.StringComparison.OrdinalIgnoreCase)).Value,
+                Name = properties.Metadata.SingleOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value,
                 Length = properties.ContentLength,
                 Metadata = properties.Metadata,
-                Tags = tags.Where(x => !x.Key.Equals("filename", System.StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value),
+                Tags = tags.Where(x => !x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value),
                 Url = uri,
                 Checksum = (properties.ContentHash == null) ?
                     null :
