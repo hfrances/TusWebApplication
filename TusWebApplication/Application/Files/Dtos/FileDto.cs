@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace TusWebApplication.Application.Files.Dtos
 {
@@ -14,7 +15,10 @@ namespace TusWebApplication.Application.Files.Dtos
         public string? Checksum { get; set; }
         public long Length { get; set; }
         public DateTimeOffset CreatedOn { get; set; }
-        public string? VersionId { get; internal set; }
+
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+        public string? VersionId { get; set; }
+        [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
         public IEnumerable<FileVersionDto>? Versions { get; set; }
         
     }

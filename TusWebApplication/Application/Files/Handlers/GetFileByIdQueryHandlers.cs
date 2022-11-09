@@ -30,12 +30,14 @@ namespace TusWebApplication.Application.Files.Handlers
         public async Task<FileDto> Handle(GetFileByIdQuery request, CancellationToken cancellationToken)
         {
             var container = BlobService.GetBlobContainerClient(request.ContainerName);
-            var blob = container.GetBlobClient(request.BlobName);
+            BlobClient blob;
             BlobProperties properties;
             IDictionary<string, string> tags;
             IEnumerable<FileVersionDto>? blobVersions = null;
             Uri uri;
 
+            // Obtener el blob. Puede haberse pedido una versión en concreto.
+            blob = container.GetBlobClient(request.BlobName);
             if (!string.IsNullOrEmpty(request.Parameters.VersionId))
             {
                 blob = blob.WithVersion(request.Parameters.VersionId);
@@ -43,7 +45,8 @@ namespace TusWebApplication.Application.Files.Handlers
             properties = (await blob.GetPropertiesAsync()).Value;
             tags = (await blob.GetTagsAsync(cancellationToken: cancellationToken)).Value.Tags;
             
-            if (request.Parameters.GenerateSas && blob.CanGenerateSasUri)
+            // Generar url.
+            if (request.Parameters.GenerateSas && blob.CanGenerateSasUri) // Se ha pedido generar el token de acceso y el blob es privado.
             {
                 uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
             }
@@ -51,7 +54,9 @@ namespace TusWebApplication.Application.Files.Handlers
             {
                 uri = blob.Uri;
             }
-            if (request.Parameters.LoadVersions)
+
+            // Obtener versiones.
+            if (request.Parameters.LoadVersions && !string.IsNullOrEmpty(properties.VersionId)) // Se ha pedido la lista de versiones y el blob soporta versionado.
             {
                 // https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-enable?source=recommendations&tabs=portal#list-blob-versions
                 blobVersions = container
