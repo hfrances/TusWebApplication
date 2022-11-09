@@ -2,41 +2,59 @@
 
 using System.Security.Cryptography;
 
-const string ServerAddress = "localhost";
-const int ServerPort = 5000;
+var commandArgs = qckdev.CommandArgsDictionary.Create(args);
 
-
-System.Threading.Thread.Sleep(2000);
-
-var serverUrl = string.Format("http://{0}:{1}/api/files/", ServerAddress, ServerPort);
-var file = new FileInfo(@"C:\Users\hfrances\Downloads\multipass-1.9.0+win-win64.exe");
-var file2 = new FileInfo(@"C:\Users\hfrances\Downloads\Docker Desktop Installer.exe");
-
-/* Upload file */
-var stw = System.Diagnostics.Stopwatch.StartNew();
-var client = new TusDotNetClient.TusClient();
-var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
-   new("container", "other"),
-   new("META:factor", "1,2")
-});
-var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
-
-uploadOperation.Progressed += (transferred, total) =>
-    Console.WriteLine($"Progress: {transferred}/{total}");
-
-await uploadOperation;
-
-/* Calculate Hash */
-string contentHash;
-using (var md5 = MD5.Create())
+if (commandArgs.TryGetValue("address", out string? serverUrl))
 {
-    using (var stream = File.OpenRead(file.FullName))
+
+    if (commandArgs.TryGetValue("0", out string? fileName))
     {
-        contentHash = Convert.ToBase64String(md5.ComputeHash(stream));
+        var file = new FileInfo(fileName);
+
+        if (file.Exists)
+        {
+            Thread.Sleep(2000); // Esperar a que cargue el servidor.
+
+            /* Upload file */
+            var stw = System.Diagnostics.Stopwatch.StartNew();
+            var client = new TusDotNetClient.TusClient();
+            var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
+               new("container", "other"),
+               new("META:factor", "1,2")
+            });
+            var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
+
+            uploadOperation.Progressed += (transferred, total) =>
+                Console.WriteLine($"Progress: {(decimal)transferred / total:P2} {transferred}/{total}");
+
+            await uploadOperation;
+
+            /* Calculate Hash */
+            string contentHash;
+            using (var md5 = MD5.Create())
+            {
+                using (var stream = File.OpenRead(file.FullName))
+                {
+                    contentHash = Convert.ToBase64String(md5.ComputeHash(stream));
+                }
+            }
+
+            /* Output */
+            Console.WriteLine($"Elapsed time: {stw.Elapsed} - {fileUrl} (Hash: {contentHash})");
+        }
+        else
+        {
+            Console.WriteLine("File not file not found.");
+        }
+    }
+    else
+    {
+        Console.WriteLine("File not specified.");
     }
 }
-
-/* Output */
-Console.WriteLine($"Elapsed time: {stw.Elapsed} - {fileUrl} (Hash: {contentHash})");
+else
+{
+    Console.WriteLine("Address not specificed.");
+}
 Console.WriteLine();
 //Console.ReadKey();
