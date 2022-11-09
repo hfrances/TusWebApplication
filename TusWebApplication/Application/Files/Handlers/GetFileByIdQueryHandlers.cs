@@ -70,7 +70,7 @@ namespace TusWebApplication.Application.Files.Handlers
                 Name = properties.Metadata.SingleOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value,
                 Length = properties.ContentLength,
                 Metadata = properties.Metadata,
-                Tags = tags.Where(x => !x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value),
+                Tags = tags,
                 Url = uri,
                 Checksum = (properties.ContentHash == null) ?
                     null :
