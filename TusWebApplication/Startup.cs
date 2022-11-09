@@ -50,11 +50,24 @@ namespace TusWebApplication
             app.UseAuthorization();
 
             var azureStorageCredentialSettings = this.Configuration.GetSection("AzureStorageCredential").Get<TusAzure.AzureStorageCredentialSettings>();
-            var store = new TusAzure.TusAzureStoreQueued(
+            var storeQueued = new TusAzure.TusAzureStoreQueued(
+                azureStorageCredentialSettings.AccountName ?? string.Empty,
+                azureStorageCredentialSettings.AccountKey ?? string.Empty,
+                azureStorageCredentialSettings.DefaultContainer ?? string.Empty
+            );
+            var store = new TusAzure.TusAzureStore(
                 azureStorageCredentialSettings.AccountName ?? string.Empty, 
                 azureStorageCredentialSettings.AccountKey ?? string.Empty, 
                 azureStorageCredentialSettings.DefaultContainer ?? string.Empty
             );
+
+            app.UseTus(httpContext => new DefaultTusConfiguration
+            {
+                Store = storeQueued,
+                UrlPath = "/api/filesQueued",
+                MetadataParsingStrategy = MetadataParsingStrategy.AllowEmptyValues,
+                UsePipelinesIfAvailable = true,
+            });
 
             app.UseTus(httpContext => new DefaultTusConfiguration
             {
@@ -94,12 +107,6 @@ namespace TusWebApplication
                 {
                     await context.Response.WriteAsync("Hello World!");
                 });
-                //endpoints.MapGet("/files/{fileId}", async context =>
-                //{
-                //    context.Response.StatusCode = 501;
-                //    await context.Response.WriteAsync("Method Not Implemented");
-                //    return;
-                //});
             });
         }
     }

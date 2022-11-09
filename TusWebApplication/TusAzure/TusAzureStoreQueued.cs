@@ -1,12 +1,9 @@
-﻿using Azure.Storage.Blobs.Specialized;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using tusdotnet.Interfaces;
-using tusdotnet.Models;
 
 namespace TusWebApplication.TusAzure
 {
@@ -45,6 +42,9 @@ namespace TusWebApplication.TusAzure
                 blobInfo.Queue.Add(new QueueItem(blockId, memo, length));
                 blobInfo.BlockNames.Add(blockId);
                 blobInfo.SizeOffset += length;
+                blobInfo.QueueCount += 1;
+                stream.DisposeAsync().GetAwaiter();
+                memo = null;
 
                 if (!blobInfo.Queue.Any(x => x.Status == QueueItemStatus.Started)) // Si la cola no está en curso, iniciarla.
                 {
@@ -66,13 +66,14 @@ namespace TusWebApplication.TusAzure
                                   {
                                       // Begin
                                       block.Status = QueueItemStatus.Started;
-                                      Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.Queue.IndexOf(block) + 1}/{blobInfo.Queue.Count}");
+                                      blobInfo.QueuePosition += 1;
+                                      Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
 
                                       // Calculate MD5 block.
                                       var buffer = new byte[block.Length];
-                                      int length;
-                                      length = await block.Stream.ReadAsync(buffer.AsMemory(0, (int)block.Length));
-                                      blobInfo.Hasher.TransformBlock(buffer, 0, length, null, 0);
+                                      int readed;
+                                      readed = await block.Stream.ReadAsync(buffer.AsMemory(0, (int)block.Length), cancellationToken);
+                                      blobInfo.Hasher.TransformBlock(buffer, 0, readed, null, 0);
                                       block.Stream.Position = 0;
 
                                       // Upload block.
@@ -80,9 +81,9 @@ namespace TusWebApplication.TusAzure
                                       blobInfo.SizeOffsetInternal += length;
 
                                       // End
-                                      block.Stream?.Dispose();
-                                      block.Stream = null;
                                       block.Status = QueueItemStatus.Done;
+                                      block.Dispose();
+                                      blobInfo.Queue.Remove(block);
                                       Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
                                       GC.Collect();
                                   }
@@ -103,14 +104,13 @@ namespace TusWebApplication.TusAzure
                                   var commitOptions = TusAzureHelper.CreateCommitBlockListOptions(blobInfo);
                                   var contentHash = commitOptions.HttpHeaders.ContentHash;
 
-                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. Hash: {Convert.ToBase64String(contentHash ?? new byte[] { })}. Commiting...");
+                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. Hash: {Convert.ToBase64String(contentHash ?? Array.Empty<byte>())}. Commiting...");
                                   await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
                                   Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
 
                                   // Validate.
                                   var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
                                   var blob = container.GetBlobClient(blobInfo.BlobName);
-
                                   blob.GetHashCode();
                               }
                           }
@@ -118,6 +118,11 @@ namespace TusWebApplication.TusAzure
                           {
                               Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
                               throw;
+                          }
+                          finally
+                          {
+                              blobInfo.Dispose();
+                              GC.Collect();
                           }
                       }, cancellationToken);
                 }

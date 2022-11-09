@@ -13,7 +13,8 @@ namespace TusWebApplication.Swagger
 
         public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
-            AddPath(swaggerDoc, "Files", "/api/files", OperationType.Post, "Uploads a file using TUS technology", new[] { ("200", "Success") });
+            AddPath(swaggerDoc, "FilesQueued", "/api/filesQueued", OperationType.Post, "Uploads a file using TUS technology. Blocks are pushed into the server and it stages them to Azure-Blob storage asynchronously.", new[] { ("200", "Success") });
+            AddPath(swaggerDoc, "Files", "/api/files", OperationType.Post, "Uploads a file using TUS technology.", new[] { ("200", "Success") });
         }
 
         private static void AddPath(OpenApiDocument swaggerDoc, string tag, string key, OperationType operationType, string? summary = null, IEnumerable<(string Key, string Description)>? responses = null)

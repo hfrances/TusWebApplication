@@ -5,7 +5,7 @@ using System;
 
 namespace TusWebApplication.TusAzure
 {
-    sealed class BlobInfo
+    sealed class BlobInfo : IDisposable
     {
         public string FileId { get; }
         public string ContainerName { get; }
@@ -17,6 +17,8 @@ namespace TusWebApplication.TusAzure
             = new List<string>();
         public IList<QueueItem> Queue { get; }
             = new List<QueueItem>();
+        public int QueueCount { get; set; }
+        public int QueuePosition { get; set; }
         public long SizeOffset { get; set; }
         public long SizeOffsetInternal { get; set; }
         public DateTime? StartTime { get; set; }
@@ -35,5 +37,15 @@ namespace TusWebApplication.TusAzure
             Hasher.Initialize();
         }
 
+        public void Dispose()
+        {
+            foreach (var blob in Queue)
+            {
+                blob.Dispose();
+            };
+            Queue.Clear();
+            BlockNames.Clear();
+            Hasher.Dispose();
+        }
     }
 }
