@@ -27,10 +27,13 @@ namespace TusWebApplication
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            var azureStorageCredentialSettings = this.Configuration.GetSection("AzureStorageCredential").Get<TusAzure.AzureStorageCredentialSettings>();
 
             services.AddCors(opts => opts.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
             services.AddApplication();
+            services.Configure(azureStorageCredentialSettings);
+
             services.AddControllers();
             services.AddSwagger();
         }
@@ -56,8 +59,8 @@ namespace TusWebApplication
                 azureStorageCredentialSettings.DefaultContainer ?? string.Empty
             );
             var store = new TusAzure.TusAzureStore(
-                azureStorageCredentialSettings.AccountName ?? string.Empty, 
-                azureStorageCredentialSettings.AccountKey ?? string.Empty, 
+                azureStorageCredentialSettings.AccountName ?? string.Empty,
+                azureStorageCredentialSettings.AccountKey ?? string.Empty,
                 azureStorageCredentialSettings.DefaultContainer ?? string.Empty
             );
 

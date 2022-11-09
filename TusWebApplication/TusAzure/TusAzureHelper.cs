@@ -12,6 +12,14 @@ namespace TusWebApplication.TusAzure
     static class TusAzureHelper
     {
 
+        public static Azure.Storage.Blobs.BlobServiceClient CreateBlobServiceClient(string accountName, string accountKey)
+        {
+            var credentials = new Azure.Storage.StorageSharedKeyCredential(accountName, accountKey);
+            var blobUri = new Uri($"https://{accountName}.blob.core.windows.net");
+
+            return new Azure.Storage.Blobs.BlobServiceClient(blobUri, credentials);
+        }
+
         public static Azure.Storage.Blobs.BlobContainerClient GetContainer(Azure.Storage.Blobs.BlobServiceClient client, string metadata, string defaultContainer)
         {
             var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, metadata)?.Metadata;

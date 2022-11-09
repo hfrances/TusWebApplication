@@ -1,4 +1,4 @@
-﻿namespace TusWebApplication.Application.Dtos
+﻿namespace TusWebApplication.Application.Common.Dtos
 {
     public sealed class VersionDto
     {

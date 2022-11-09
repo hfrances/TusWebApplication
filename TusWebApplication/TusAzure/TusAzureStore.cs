@@ -19,10 +19,7 @@ namespace TusWebApplication.TusAzure
 
         public TusAzureStore(string accountName, string accountKey, string defaultContainer)
         {
-            var credentials = new Azure.Storage.StorageSharedKeyCredential(accountName, accountKey);
-            var blobUri = new Uri($"https://{accountName}.blob.core.windows.net");
-
-            this.BlobService = new Azure.Storage.Blobs.BlobServiceClient(blobUri, credentials);
+            this.BlobService = TusAzureHelper.CreateBlobServiceClient(accountName, accountKey);
             this.DefaultContainer = defaultContainer;
         }
 

@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
+using TusWebApplication.Application.Files.Dtos;
+using TusWebApplication.Application.Files.Queries;
 
 namespace TusWebApplication.Controllers
 {
@@ -13,11 +15,14 @@ namespace TusWebApplication.Controllers
         /// <summary>
         /// Returns assembly the assembly version.
         /// </summary>
-        [HttpGet("{fileId}")]
-        public async Task GetFilebyIdAsync(string fileId)
-        {
-            await Task.Run(() => System.Diagnostics.Debug.WriteLine($"GetFile: {fileId}"));
-        }
+        [HttpGet("{container}/{blob}")]
+        public Task<FileDto> GetFilebyIdAsync(string container, string blob, [FromQuery] GetFileByIdQuery.RequestParameters parameters)
+            => Send(new GetFileByIdQuery
+            {
+                ContainerName = container,
+                BlobName = blob,
+                Parameters = parameters
+            });
 
     }
 

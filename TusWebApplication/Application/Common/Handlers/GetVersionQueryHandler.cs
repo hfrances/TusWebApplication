@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using TusWebApplication.Application.Dtos;
+using TusWebApplication.Application.Common.Dtos;
 
-namespace TusWebApplication.Application.Queries
+namespace TusWebApplication.Application.Common.Queries
 {
     sealed class GetVersionQueryHandler : IRequestHandler<GetVersionQuery, VersionDto>
     {

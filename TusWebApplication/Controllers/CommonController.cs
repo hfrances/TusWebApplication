@@ -5,8 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using TusWebApplication.Application.Dtos;
-using TusWebApplication.Application.Queries;
+using TusWebApplication.Application.Common.Dtos;
+using TusWebApplication.Application.Common.Queries;
 
 namespace TusWebApplication.Controllers
 {
