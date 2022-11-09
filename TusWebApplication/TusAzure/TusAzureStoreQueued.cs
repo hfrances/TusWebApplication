@@ -93,10 +93,11 @@ namespace TusWebApplication.TusAzure
                           {
                               throw;
                           }
-
-                          try
+                          
+                          if (blobInfo.SizeOffset == blobInfo.UploadLength)
                           {
-                              if (blobInfo.SizeOffset == blobInfo.UploadLength)
+
+                              try
                               {
                                   blobInfo.Hasher.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
 
@@ -112,17 +113,19 @@ namespace TusWebApplication.TusAzure
                                   var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
                                   var blob = container.GetBlobClient(blobInfo.BlobName);
                                   blob.GetHashCode();
+                                  var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
+                                  uri.ToString();
                               }
-                          }
-                          catch (Exception ex)
-                          {
-                              Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
-                              throw;
-                          }
-                          finally
-                          {
-                              blobInfo.Dispose();
-                              GC.Collect();
+                              catch (Exception ex)
+                              {
+                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                                  throw;
+                              }
+                              finally
+                              {
+                                  blobInfo.Dispose();
+                                  GC.Collect();
+                              }
                           }
                       }, cancellationToken);
                 }
