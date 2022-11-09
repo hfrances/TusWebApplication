@@ -26,7 +26,7 @@ namespace TusWebApplication.TusAzure
             Metadata? containerMetadata;
             string containerName;
 
-            containerMetadata = metadataParsed?.SingleOrDefault(x => x.Key.Equals("container", StringComparison.OrdinalIgnoreCase)).Value;
+            containerMetadata = metadataParsed?.SingleOrDefault(x => x.Key.Equals("BLOB:container", StringComparison.OrdinalIgnoreCase)).Value;
             if (containerMetadata == null)
             {
                 containerName = defaultContainer;
@@ -46,6 +46,42 @@ namespace TusWebApplication.TusAzure
             {
                 return container;
             }
+        }
+
+        public static string? GetBlobName(string metadata)
+        {
+            var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, metadata)?.Metadata;
+            Metadata? blobMetadata;
+            string? rdo;
+
+            blobMetadata = metadataParsed?.SingleOrDefault(x => x.Key.Equals("BLOB:name", StringComparison.OrdinalIgnoreCase)).Value;
+            if (blobMetadata == null)
+            {
+                rdo = null;
+            }
+            else
+            {
+                rdo = blobMetadata.GetString(System.Text.Encoding.UTF8);
+            }
+            return rdo;
+        }
+
+        public static bool? GetAllowReplace(string metadata)
+        {
+            var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, metadata)?.Metadata;
+            Metadata? blobMetadata;
+            bool? rdo;
+
+            blobMetadata = metadataParsed?.SingleOrDefault(x => x.Key.Equals("BLOB:replace", StringComparison.OrdinalIgnoreCase)).Value;
+            if (blobMetadata == null)
+            {
+                rdo = null;
+            }
+            else
+            {
+                rdo = bool.Parse(blobMetadata.GetString(System.Text.Encoding.UTF8));
+            }
+            return rdo;
         }
 
         public static Task<ITusFile> GetFileAsync(Azure.Storage.Blobs.BlobServiceClient client, string fileId, CancellationToken cancellationToken)
@@ -101,17 +137,17 @@ namespace TusWebApplication.TusAzure
             {
                 var stringValue = value.GetString(System.Text.Encoding.UTF8);
 
-                if (key.Equals("container", StringComparison.OrdinalIgnoreCase))
+                if (key.StartsWith("BLOB:", StringComparison.OrdinalIgnoreCase))
                 {
                     // Do Nothing.
                 }
-                else if (key.StartsWith("META:", StringComparison.OrdinalIgnoreCase))
+                else if (key.StartsWith("TAG:", StringComparison.OrdinalIgnoreCase))
                 {
-                    commitOptions.Metadata.Add(key[5..], stringValue);
+                    commitOptions.Tags.Add(key[4..], stringValue);
                 }
                 else
                 {
-                    commitOptions.Tags.Add(key, stringValue);
+                    commitOptions.Metadata.Add(key, stringValue); 
                 }
             }
             return commitOptions;

@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json.Serialization;
 using tusdotnet;
 using tusdotnet.Interfaces;
 using tusdotnet.Models;
@@ -34,7 +36,12 @@ namespace TusWebApplication
             services.AddApplication();
             services.Configure(azureStorageCredentialSettings);
 
-            services.AddControllers();
+            services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
+                });
+
             services.AddSwagger();
         }
 

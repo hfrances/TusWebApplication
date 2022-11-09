@@ -2,7 +2,7 @@
   "profiles": {
     "TusConsoleApp": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\GitHubDesktopSetup-x64.exe\" /address:\"http://localhost:5120/api/filesQueued\""
+      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\GitHubDesktopSetup-x64.exe\" /address:\"http://localhost:5120/api/filesQueued\" /container:other"
     }
   }
 }

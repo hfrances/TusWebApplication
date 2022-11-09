@@ -14,5 +14,8 @@ namespace TusWebApplication.Application.Files.Dtos
         public string? Checksum { get; set; }
         public long Length { get; set; }
         public DateTimeOffset CreatedOn { get; set; }
+        public string? VersionId { get; internal set; }
+        public IEnumerable<FileVersionDto>? Versions { get; set; }
+        
     }
 }

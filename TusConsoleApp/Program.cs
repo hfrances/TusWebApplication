@@ -1,11 +1,17 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
+using qckdev;
+using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Security.Principal;
 
 var commandArgs = qckdev.CommandArgsDictionary.Create(args);
 
 if (commandArgs.TryGetValue("address", out string? serverUrl))
 {
+    var containerName = commandArgs.GetValueOrDefault("container", string.Empty);
+    var blobName = commandArgs.GetValueOrDefault("blob", string.Empty);
+    var replace = commandArgs.GetValueOrDefault("replace", "false").In("", "true");
 
     if (commandArgs.TryGetValue("0", out string? fileName))
     {
@@ -19,8 +25,11 @@ if (commandArgs.TryGetValue("address", out string? serverUrl))
             var stw = System.Diagnostics.Stopwatch.StartNew();
             var client = new TusDotNetClient.TusClient();
             var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
-               new("container", "other"),
-               new("META:factor", "1,2")
+               new("BLOB:container", containerName),
+               new("BLOB:name", blobName),
+               new("BLOB:replace", replace.ToString()),
+               new("TAG:extension", file.Extension),
+               new("factor", "1,2")
             });
             var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using tusdotnet.Interfaces;
+using tusdotnet.Models;
 
 namespace TusWebApplication.TusAzure
 {
@@ -92,6 +93,7 @@ namespace TusWebApplication.TusAzure
                     finally
                     {
                         blobInfo.Dispose();
+                        Blobs.Remove(blobInfo.FileId);
                     }
                 }
                 GC.Collect();
@@ -104,15 +106,31 @@ namespace TusWebApplication.TusAzure
             }
         }
 
-        public Task<string> CreateFileAsync(long uploadLength, string metadata, CancellationToken cancellationToken)
+        public async Task<string> CreateFileAsync(long uploadLength, string metadata, CancellationToken cancellationToken)
         {
             var container = TusAzureHelper.GetContainer(this.BlobService, metadata, this.DefaultContainer);
-            var blobName = Guid.NewGuid().ToString();
-            var blobId = $"{container.Name}/{blobName}";
-            var blob = container.GetBlockBlobClient(blobName);
+            var blobName = TusAzureHelper.GetBlobName(metadata);
+            string blobId;
+            BlockBlobClient blob;
 
-            Blobs.Add(blobId, new BlobInfo(blobId, container.Name, blobName, metadata, uploadLength, blob));
-            return Task.FromResult(blobId);
+            if (string.IsNullOrEmpty(blobName))
+            {
+                blobName = Guid.NewGuid().ToString();
+            }
+            blob = container.GetBlockBlobClient(blobName);
+            blobId = $"{blob.BlobContainerName}/{blob.Name}";
+
+            if (await blob.ExistsAsync(cancellationToken))
+            {
+                var allowReplace = TusAzureHelper.GetAllowReplace(metadata);
+
+                if (allowReplace != true)
+                {
+                    throw new ArgumentException($"Blob {blobId} already exists. Set 'replace' argument for overwrite it.");
+                }
+            }
+            Blobs.Add(blobId, new BlobInfo(blobId, blob.BlobContainerName, blob.Name, metadata, uploadLength, blob));
+            return blobId;
         }
 
         public Task<bool> FileExistAsync(string fileId, CancellationToken cancellationToken)

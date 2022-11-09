@@ -1,6 +1,9 @@
-﻿using MediatR;
+﻿using Azure.Storage.Blobs.Models;
+using Azure.Storage.Blobs;
+using MediatR;
 using Microsoft.Extensions.Options;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,10 +31,18 @@ namespace TusWebApplication.Application.Files.Handlers
         {
             var container = BlobService.GetBlobContainerClient(request.ContainerName);
             var blob = container.GetBlobClient(request.BlobName);
-            var properties = (await blob.GetPropertiesAsync()).Value;
-            var tags = (await blob.GetTagsAsync(cancellationToken: cancellationToken)).Value.Tags;
+            BlobProperties properties;
+            IDictionary<string, string> tags;
+            IEnumerable<FileVersionDto>? blobVersions = null;
             Uri uri;
 
+            if (!string.IsNullOrEmpty(request.Parameters.VersionId))
+            {
+                blob = blob.WithVersion(request.Parameters.VersionId);
+            }
+            properties = (await blob.GetPropertiesAsync()).Value;
+            tags = (await blob.GetTagsAsync(cancellationToken: cancellationToken)).Value.Tags;
+            
             if (request.Parameters.GenerateSas && blob.CanGenerateSasUri)
             {
                 uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
@@ -39,6 +50,19 @@ namespace TusWebApplication.Application.Files.Handlers
             else
             {
                 uri = blob.Uri;
+            }
+            if (request.Parameters.LoadVersions)
+            {
+                // https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-enable?source=recommendations&tabs=portal#list-blob-versions
+                blobVersions = container
+                    .GetBlobs(BlobTraits.None, BlobStates.Version, prefix: blob.Name, cancellationToken: cancellationToken)
+                        .Where(blob => blob.Name == blob.Name)
+                        .OrderByDescending(version => version.VersionId)
+                        .Select(value => new FileVersionDto
+                        {
+                            VersionId = value.VersionId,
+                            CreatedOn = value.Properties.CreatedOn
+                        });
             }
             return new FileDto
             {
@@ -48,10 +72,12 @@ namespace TusWebApplication.Application.Files.Handlers
                 Metadata = properties.Metadata,
                 Tags = tags.Where(x => !x.Key.Equals("filename", System.StringComparison.OrdinalIgnoreCase)).ToDictionary(x => x.Key, x => x.Value),
                 Url = uri,
-                Checksum = (properties.ContentHash == null) ? 
-                    null : 
+                Checksum = (properties.ContentHash == null) ?
+                    null :
                     Convert.ToBase64String(properties.ContentHash),
                 CreatedOn = properties.CreatedOn,
+                VersionId = properties.VersionId,
+                Versions = blobVersions
             };
         }
     }
