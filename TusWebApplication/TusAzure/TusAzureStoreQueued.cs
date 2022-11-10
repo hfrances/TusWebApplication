@@ -50,57 +50,57 @@ namespace TusWebApplication.TusAzure
                 {
                     _ = Task.Run(async () =>
                       {
+
                           try
                           {
-                              try
+                              QueueItem? block;
+
+                              // Una vez entrado en el bucle, seguirá hasta que no quede nada más en la cola.
+                              // Las demás llamadas a este método simplemente añadirán en la cola.
+                              while ((block = blobInfo.Queue.FirstOrDefault(x => x.Status == QueueItemStatus.Waiting)) != null)
                               {
-                                  QueueItem? block;
-
-                                  // Una vez entrado en el bucle, seguirá hasta que no quede nada más en la cola.
-                                  // Las demás llamadas a este método simplemente añadirán en la cola.
-                                  while ((block = blobInfo.Queue.FirstOrDefault(x => x.Status == QueueItemStatus.Waiting)) != null)
+                                  if (block.Stream == null)
                                   {
-                                      if (block.Stream == null)
-                                      {
-                                          throw new NullReferenceException("There is no stream content in this block.");
-                                      }
-                                      else
-                                      {
-                                          // Begin
-                                          block.Status = QueueItemStatus.Started;
-                                          blobInfo.QueuePosition += 1;
-                                          Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
+                                      throw new NullReferenceException("There is no stream content in this block.");
+                                  }
+                                  else
+                                  {
+                                      // Begin
+                                      block.Status = QueueItemStatus.Started;
+                                      blobInfo.QueuePosition += 1;
+                                      Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
 
-                                          // Calculate MD5 block.
-                                          var buffer = new byte[block.Length];
-                                          int readed;
-                                          readed = await block.Stream.ReadAsync(buffer.AsMemory(0, (int)block.Length), cancellationToken);
-                                          blobInfo.Hasher.TransformBlock(buffer, 0, readed, null, 0);
-                                          block.Stream.Position = 0;
+                                      // Calculate MD5 block.
+                                      var buffer = new byte[block.Length];
+                                      int readed;
+                                      readed = await block.Stream.ReadAsync(buffer.AsMemory(0, (int)block.Length), cancellationToken);
+                                      blobInfo.Hasher.TransformBlock(buffer, 0, readed, null, 0);
+                                      block.Stream.Position = 0;
 
-                                          // Upload block.
-                                          _ = await blobInfo.Blob.StageBlockAsync(block.Name, block.Stream, cancellationToken: cancellationToken);
-                                          blobInfo.SizeOffsetInternal += length;
+                                      // Upload block.
+                                      _ = await blobInfo.Blob.StageBlockAsync(block.Name, block.Stream, cancellationToken: cancellationToken);
+                                      blobInfo.SizeOffsetInternal += length;
 
-                                          // End
-                                          block.Status = QueueItemStatus.Done;
-                                          block.Dispose();
-                                          blobInfo.Queue.Remove(block);
-                                          Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
-                                          GC.Collect();
-                                      }
+                                      // End
+                                      block.Status = QueueItemStatus.Done;
+                                      block.Dispose();
+                                      blobInfo.Queue.Remove(block);
+                                      Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
+                                      GC.Collect();
                                   }
                               }
-                              catch (Exception ex)
+                          }
+                          catch (Exception ex)
+                          {
+                              Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {blockId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                              throw;
+                          }
+
+                          if (blobInfo.SizeOffset == blobInfo.UploadLength)
+                          {
+
+                              try
                               {
-                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {blockId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
-                                  throw;
-                              }
-
-                              if (blobInfo.SizeOffset == blobInfo.UploadLength)
-                              {
-
-
                                   blobInfo.Hasher.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
 
                                   // Commit.
@@ -118,17 +118,17 @@ namespace TusWebApplication.TusAzure
                                   var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
                                   uri.ToString();
                               }
-                          }
-                          catch (Exception ex)
-                          {
-                              Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
-                              throw;
-                          }
-                          finally
-                          {
-                              blobInfo.Dispose();
-                              Blobs.Remove(blobInfo.FileId);
-                              GC.Collect();
+                              catch (Exception ex)
+                              {
+                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                                  throw;
+                              }
+                              finally
+                              {
+                                  blobInfo.Dispose();
+                                  Blobs.Remove(blobInfo.FileId);
+                                  GC.Collect();
+                              }
                           }
                       }, cancellationToken);
                 }
