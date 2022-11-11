@@ -59,6 +59,8 @@ namespace TusWebApplication
             app.UseRouting();
             app.UseAuthorization();
 
+            app.UseSerializedExceptionHandler();
+
             var azureStorageCredentialSettings = this.Configuration.GetSection("AzureStorageCredential").Get<TusAzure.AzureStorageCredentialSettings>();
             var storeQueued = new TusAzure.TusAzureStoreQueued(
                 azureStorageCredentialSettings.AccountName ?? string.Empty,
