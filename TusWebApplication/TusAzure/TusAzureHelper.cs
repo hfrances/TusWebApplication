@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using tusdotnet.Interfaces;
 using System.Threading;
+using static System.Reflection.Metadata.BlobBuilder;
+using System.IO;
 
 namespace TusWebApplication.TusAzure
 {
@@ -27,7 +29,7 @@ namespace TusWebApplication.TusAzure
             string containerName;
 
             containerMetadata = metadataParsed?.SingleOrDefault(x => x.Key.Equals("BLOB:container", StringComparison.OrdinalIgnoreCase)).Value;
-            if (containerMetadata == null)
+            if (containerMetadata == null || containerMetadata.HasEmptyValue)
             {
                 containerName = defaultContainer;
             }
@@ -147,7 +149,7 @@ namespace TusWebApplication.TusAzure
                 }
                 else
                 {
-                    commitOptions.Metadata.Add(key, stringValue); 
+                    commitOptions.Metadata.Add(key, stringValue);
                 }
             }
             return commitOptions;
