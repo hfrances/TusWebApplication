@@ -31,12 +31,16 @@ if (commandArgs.TryGetValue("address", out string? serverUrl))
                new("TAG:extension", file.Extension),
                new("factor", "1,2")
             });
+            var position = Console.GetCursorPosition();
             var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
 
             uploadOperation.Progressed += (transferred, total) =>
-                Console.WriteLine($"Progress: {(decimal)transferred / total:P2} {transferred}/{total}");
-
+            {
+                Console.SetCursorPosition(position.Left, position.Top);
+                Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
+            };
             await uploadOperation;
+            Console.WriteLine();
 
             /* Calculate Hash */
             string contentHash;
@@ -49,7 +53,9 @@ if (commandArgs.TryGetValue("address", out string? serverUrl))
             }
 
             /* Output */
-            Console.WriteLine($"Elapsed time: {stw.Elapsed} - {fileUrl} (Hash: {contentHash})");
+            Console.WriteLine($"Elapsed time:\t{stw.Elapsed}");
+            Console.WriteLine($"File:\t\t{fileUrl}");
+            Console.WriteLine($"Hash:\t\t{contentHash}");
         }
         else
         {
