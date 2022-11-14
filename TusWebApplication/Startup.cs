@@ -4,14 +4,10 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using System.Collections.Generic;
 using System.IO;
 using System.Text.Json.Serialization;
 using tusdotnet;
-using tusdotnet.Interfaces;
 using tusdotnet.Models;
-using tusdotnet.Stores;
 using TusWebApplication.Application;
 using TusWebApplication.Swagger;
 
@@ -30,11 +26,15 @@ namespace TusWebApplication
         public void ConfigureServices(IServiceCollection services)
         {
             var azureStorageCredentialSettings = this.Configuration.GetSection("AzureStorageCredential").Get<TusAzure.AzureStorageCredentialSettings>();
+            var azureStorageCredentialSettings2 = this.Configuration.GetSection("AzureStorageCredential").Get<AzureBlobProvider.AzureStorageCredentialSettings>();
+
 
             services.AddCors(opts => opts.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
             services.AddApplication();
+            services.AddScoped<AzureBlobProvider.AzureBlobFileProvider>();
             services.Configure(azureStorageCredentialSettings);
+            services.Configure(azureStorageCredentialSettings2);
 
             services.AddControllers()
                 .AddJsonOptions(options =>

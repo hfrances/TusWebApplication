@@ -8,7 +8,7 @@ namespace TusWebApplication.Application.Files.Dtos
     {
 
         public string BlobId { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
+        public string? Name { get; set; }
         public IDictionary<string, string>? Tags { get; set; }
         public IDictionary<string, string>? Metadata { get; set; }
         public Uri? Url { get; set; }
