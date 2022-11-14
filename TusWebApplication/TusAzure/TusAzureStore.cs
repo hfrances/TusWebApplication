@@ -17,7 +17,6 @@ namespace TusWebApplication.TusAzure
         protected string DefaultContainer { get; }
         protected Dictionary<string, BlobInfo> Blobs { get; } = new Dictionary<string, BlobInfo>();
 
-
         public TusAzureStore(string accountName, string accountKey, string defaultContainer)
         {
             this.BlobService = TusAzureHelper.CreateBlobServiceClient(accountName, accountKey);
@@ -153,7 +152,17 @@ namespace TusWebApplication.TusAzure
 
         public Task<long?> GetUploadLengthAsync(string fileId, CancellationToken cancellationToken)
         {
-            return Task.FromResult((long?)Blobs[fileId].UploadLength);
+            long? length;
+
+            if (Blobs.TryGetValue(fileId, out BlobInfo? blob))
+            {
+                length = blob.UploadLength;
+            }
+            else
+            {
+                length = null;
+            }
+            return Task.FromResult(length);
         }
 
         public Task<string> GetUploadMetadataAsync(string fileId, CancellationToken cancellationToken)

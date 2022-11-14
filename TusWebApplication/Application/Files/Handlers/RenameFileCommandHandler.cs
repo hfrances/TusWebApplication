@@ -5,7 +5,6 @@ using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Commands;
@@ -16,11 +15,11 @@ namespace TusWebApplication.Application.Files.Handlers
     sealed class RenameFileCommandHandler : IRequestHandler<RenameFileCommand>
     {
 
-        Azure.Storage.Blobs.BlobServiceClient BlobService { get; }
+        BlobServiceClient BlobService { get; }
 
-        public RenameFileCommandHandler(IOptions<TusAzure.AzureStorageCredentialSettings> azureOptions)
+        public RenameFileCommandHandler(IOptions<AzureBlobProvider.AzureStorageCredentialSettings> azureOptions)
         {
-            this.BlobService = TusAzure.TusAzureHelper.CreateBlobServiceClient(
+            this.BlobService = AzureBlobProvider.AzureBlobHelper.CreateBlobServiceClient(
                 azureOptions.Value.AccountName ?? string.Empty,
                 azureOptions.Value.AccountKey ?? string.Empty
             );

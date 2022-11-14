@@ -5,7 +5,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using qckdev.Extensions.Configuration;
+using System;
 using System.IO;
+using System.Linq;
 using System.Text.Json.Serialization;
 using tusdotnet;
 using tusdotnet.Models;
@@ -35,6 +37,16 @@ namespace TusWebApplication
 
             services.AddApplication();
             services.AddScoped<AzureBlobProvider.AzureBlobFileProvider>();
+            services.AddSingleton(x => new TusAzure.TusAzureStoreQueued(
+                azureStorageCredentialSettings.AccountName ?? string.Empty,
+                azureStorageCredentialSettings.AccountKey ?? string.Empty,
+                azureStorageCredentialSettings.DefaultContainer ?? string.Empty
+            ));
+            services.AddSingleton(x => new TusAzure.TusAzureStore(
+                azureStorageCredentialSettings.AccountName ?? string.Empty,
+                azureStorageCredentialSettings.AccountKey ?? string.Empty,
+                azureStorageCredentialSettings.DefaultContainer ?? string.Empty
+            ));
             services.Configure(azureStorageCredentialSettings);
             services.Configure(azureStorageCredentialSettings2);
 
@@ -51,6 +63,26 @@ namespace TusWebApplication
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             var basePath = this.Configuration.GetSection("BasePath")?.Value ?? "/";
+            var combineUrl = new Func<string, string, string>((string basePath, string urlPath) =>
+            {
+                string rdo;
+
+                if (string.IsNullOrEmpty(basePath))
+                {
+                    rdo = urlPath;
+                }
+                else
+                {
+                    int startIndex = 0;
+
+                    if (basePath.EndsWith("/") && urlPath.StartsWith("/"))
+                    {
+                        startIndex = 1;
+                    }
+                    rdo = $"{basePath}{urlPath[startIndex..]}";
+                }
+                return rdo;
+            });
 
             app.UseCors();
 
@@ -66,55 +98,20 @@ namespace TusWebApplication
 
             app.UseSerializedExceptionHandler();
 
-            var azureStorageCredentialSettings = this.Configuration.GetSection("AzureStorageCredential").Get<TusAzure.AzureStorageCredentialSettings>();
-            var storeQueued = new TusAzure.TusAzureStoreQueued(
-                azureStorageCredentialSettings.AccountName ?? string.Empty,
-                azureStorageCredentialSettings.AccountKey ?? string.Empty,
-                azureStorageCredentialSettings.DefaultContainer ?? string.Empty
-            );
-            var store = new TusAzure.TusAzureStore(
-                azureStorageCredentialSettings.AccountName ?? string.Empty,
-                azureStorageCredentialSettings.AccountKey ?? string.Empty,
-                azureStorageCredentialSettings.DefaultContainer ?? string.Empty
-            );
-
             app.UseTus(httpContext => new DefaultTusConfiguration
             {
-                Store = storeQueued,
-                UrlPath = "/api/filesQueued",
+                Store = app.ApplicationServices.GetService<TusAzure.TusAzureStoreQueued>(),
+                UrlPath = combineUrl(basePath, "/api/filesQueued"),
                 MetadataParsingStrategy = MetadataParsingStrategy.AllowEmptyValues,
                 UsePipelinesIfAvailable = true,
             });
 
             app.UseTus(httpContext => new DefaultTusConfiguration
             {
-                // This method is called on each request so different configurations can be returned per user, domain, path etc.
-                // Return null to disable tusdotnet for the current request.
-
-                // c:\tusfiles is where to store files
-                Store = store,
-                // On what url should we listen for uploads?
-                UrlPath = "/api/files",
+                Store = app.ApplicationServices.GetService<TusAzure.TusAzureStore>(),
+                UrlPath = combineUrl(basePath, "/api/files"),
                 MetadataParsingStrategy = MetadataParsingStrategy.AllowEmptyValues,
                 UsePipelinesIfAvailable = true,
-                Events = new tusdotnet.Models.Configuration.Events
-                {
-                    //OnFileCompleteAsync = async eventContext =>
-                    //{
-                    //    ITusFile file = await eventContext.GetFileAsync();
-                    //    Dictionary<string, Metadata> metadata = await file.GetMetadataAsync(eventContext.CancellationToken);
-                    //    Stream content = await file.GetContentAsync(eventContext.CancellationToken);
-
-                    //    ////await DoSomeProcessing(content, metadata);
-                    //    content.ToString();
-
-                    //    var fileName = metadata["filename"].GetString(System.Text.Encoding.UTF8);
-                    //    var container = metadata["container"].GetString(System.Text.Encoding.UTF8);
-                    //    var factor = metadata["factor"].GetString(System.Text.Encoding.UTF8);
-
-                    //    eventContext.ToString();
-                    //}
-                }
             });
 
             app.UseEndpoints(endpoints =>

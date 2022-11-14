@@ -18,9 +18,9 @@ namespace TusWebApplication.Application.Files.Handlers
 
         BlobServiceClient BlobService { get; }
 
-        public GetFileByIdQueryHandlers(IOptions<TusAzure.AzureStorageCredentialSettings> azureOptions)
+        public GetFileByIdQueryHandlers(IOptions<AzureBlobProvider.AzureStorageCredentialSettings> azureOptions)
         {
-            this.BlobService = TusAzure.TusAzureHelper.CreateBlobServiceClient(
+            this.BlobService = AzureBlobProvider.AzureBlobHelper.CreateBlobServiceClient(
                 azureOptions.Value.AccountName ?? string.Empty,
                 azureOptions.Value.AccountKey ?? string.Empty
             );
