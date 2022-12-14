@@ -1,75 +1,83 @@
-﻿// See https://aka.ms/new-console-template for more information
-
+﻿using System;
 using qckdev;
-using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Security.Principal;
+using qckdev.Linq;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 
-var commandArgs = qckdev.CommandArgsDictionary.Create(args);
-
-if (commandArgs.TryGetValue("address", out string? serverUrl))
+namespace TusConsoleApp
 {
-    var containerName = commandArgs.GetValueOrDefault("container", string.Empty);
-    var blobName = commandArgs.GetValueOrDefault("blob", string.Empty);
-    var replace = commandArgs.GetValueOrDefault("replace", "false").In("", "true");
-
-    if (commandArgs.TryGetValue("0", out string? fileName))
+    static class Program
     {
-        var file = new FileInfo(fileName);
-
-        if (file.Exists)
+        static async Task Main(string[] args)
         {
-            Thread.Sleep(2000); // Esperar a que cargue el servidor.
+            var commandArgs = qckdev.CommandArgsDictionary.Create(args);
 
-            /* Upload file */
-            var stw = System.Diagnostics.Stopwatch.StartNew();
-            var client = new TusDotNetClient.TusClient();
-            var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
-               new("BLOB:container", containerName),
-               new("BLOB:name", blobName),
-               new("BLOB:replace", replace.ToString()),
-               new("TAG:extension", file.Extension),
-               new("factor", "1,2")
-            });
-            var position = Console.GetCursorPosition();
-            var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
-
-            uploadOperation.Progressed += (transferred, total) =>
+            if (commandArgs.TryGetValue("address", out string serverUrl))
             {
-                Console.SetCursorPosition(position.Left, position.Top);
-                Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
-            };
-            await uploadOperation;
-            Console.WriteLine();
+                var containerName = commandArgs.TryGetValue("container", string.Empty);
+                var blobName = commandArgs.TryGetValue("blob", string.Empty);
+                var replace = commandArgs.TryGetValue("replace", "false").In("", "true");
 
-            /* Calculate Hash */
-            string contentHash;
-            using (var md5 = MD5.Create())
-            {
-                using (var stream = File.OpenRead(file.FullName))
+                if (commandArgs.TryGetValue("0", out string fileName))
                 {
-                    contentHash = Convert.ToBase64String(md5.ComputeHash(stream));
+                    var file = new FileInfo(fileName);
+
+                    if (file.Exists)
+                    {
+                        Thread.Sleep(2000); // Esperar a que cargue el servidor.
+
+                        /* Upload file */
+                        var stw = System.Diagnostics.Stopwatch.StartNew();
+                        var client = new TusDotNetClient.TusClient();
+                        var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
+                           ("BLOB:container", containerName),
+                           ("BLOB:name", blobName),
+                           ("BLOB:replace", replace.ToString()),
+                           ("TAG:extension", file.Extension),
+                           ("factor", "1,2")
+                        });
+                        (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
+                        var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
+
+                        uploadOperation.Progressed += (transferred, total) =>
+                        {
+                            Console.SetCursorPosition(position.Left, position.Top);
+                            Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
+                        };
+                        await uploadOperation;
+                        Console.WriteLine();
+                        Console.WriteLine($"Elapsed time:\t{stw.Elapsed}");
+                        Console.WriteLine($"File:\t\t{fileUrl}");
+
+                        /* Calculate Hash */
+                        string contentHash;
+                        using (var md5 = MD5.Create())
+                        {
+                            using (var stream = File.OpenRead(file.FullName))
+                            {
+                                contentHash = Convert.ToBase64String(md5.ComputeHash(stream));
+                            }
+                        }
+                        Console.WriteLine($"Hash:\t\t{contentHash}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("File not found.");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("File not specified.");
                 }
             }
-
-            /* Output */
-            Console.WriteLine($"Elapsed time:\t{stw.Elapsed}");
-            Console.WriteLine($"File:\t\t{fileUrl}");
-            Console.WriteLine($"Hash:\t\t{contentHash}");
-        }
-        else
-        {
-            Console.WriteLine("File not file not found.");
+            else
+            {
+                Console.WriteLine("Address not specificed.");
+            }
+            Console.WriteLine();
+            //Console.ReadKey();
         }
     }
-    else
-    {
-        Console.WriteLine("File not specified.");
-    }
 }
-else
-{
-    Console.WriteLine("Address not specificed.");
-}
-Console.WriteLine();
-//Console.ReadKey();

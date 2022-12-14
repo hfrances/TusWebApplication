@@ -2,7 +2,7 @@
   "profiles": {
     "TusConsoleApp": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\GitHubDesktopSetup-x64.exe\" /address:\"http://localhost:5120/api/filesQueued\" /container:other"
+      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\ableton_live_lite_11.2_64.zip\" /address:\"http://api-blobstream.dev.hmy-group.com/us/api/filesQueued\" /container:other"
     }
   }
 }
