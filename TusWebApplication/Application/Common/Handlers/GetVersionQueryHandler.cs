@@ -2,6 +2,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Threading;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Common.Dtos;
@@ -15,8 +18,7 @@ namespace TusWebApplication.Application.Common.Queries
         {
             return await Task.Run(() =>
             {
-                Version? version;
-                var assembly = System.Reflection.Assembly.GetEntryAssembly();
+                var assembly = Assembly.GetEntryAssembly();
 
                 if (assembly == null)
                 {
@@ -24,13 +26,16 @@ namespace TusWebApplication.Application.Common.Queries
                 }
                 else
                 {
-                    version = assembly.GetName().Version;
-                }
+                    var productId = assembly.GetCustomAttribute<GuidAttribute>()?.Value;
 
-                return new VersionDto
-                {
-                    Version = version?.ToString()
-                };
+                    return new VersionDto
+                    {
+                        ProductId = productId == null ? (Guid?)null : Guid.Parse(productId),
+                        Version = assembly.GetName().Version?.ToString(),
+                        OsPlatform = RuntimeInformation.OSDescription,
+                        TargetFramework = assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName
+                    };
+                }
             });
         }
     }
