@@ -2,7 +2,7 @@
   "profiles": {
     "TusConsoleApp": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\ableton_live_lite_11.2_64.zip\" /address:\"http://localhost:5120/api/files/hfcloud_us\" /container:other"
+      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\ableton_live_lite_11.2_64.zip\" /address:\"http://localhost:32812/api/files/hfcloud_us\" /container:other"
     }
   }
 }
