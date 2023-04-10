@@ -13,6 +13,7 @@ namespace TusWebApplication.Application.Files.Queries
             public bool LoadVersions { get; set; }
         }
 
+        public string StoreName { get; set; } = string.Empty;
         public string ContainerName { get; set; } = string.Empty;
         public string BlobName { get; set; } = string.Empty;
         public RequestParameters Parameters { get; set; } = new RequestParameters();

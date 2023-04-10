@@ -1,48 +1,60 @@
-﻿using Azure.Storage.Blobs.Specialized;
+﻿using Azure.Core;
+using Azure.Storage.Blobs.Specialized;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
 using System;
+using System.Linq;
 
 namespace TusWebApplication.AzureBlobProvider
 {
     public sealed class AzureBlobFileProvider : IFileProvider
     {
 
-        Azure.Storage.Blobs.BlobServiceClient BlobService { get; }
+        AzureStorageCredentialsSettings AzureSettings { get; }
 
-        public AzureBlobFileProvider(IOptions<AzureStorageCredentialSettings> options)
+        public AzureBlobFileProvider(IOptions<AzureStorageCredentialsSettings> azureOptions)
         {
-            this.BlobService = AzureBlobHelper.CreateBlobServiceClient(
-                options.Value.AccountName ?? string.Empty,
-                options.Value.AccountKey ?? string.Empty
-            );
+            this.AzureSettings = azureOptions.Value;
         }
 
         public IFileInfo GetFileInfo(string subpath)
         {
             var blobId = subpath.Split('/');
+            var storageName = blobId.First();
 
-            if (blobId.Length == 2)
+            if (AzureSettings.TryGetValue(storageName, out AzureStorageCredentialSettings? settings))
             {
-                var containerName = blobId[0];
-                var blobName = blobId[1];
-                var container = BlobService.GetBlobContainerClient(containerName);
+                var blobService = AzureBlobHelper.CreateBlobServiceClient(
+                    settings.AccountName ?? string.Empty,
+                    settings.AccountKey ?? string.Empty
+                );
 
-                if (container.Exists())
+                if (blobId.Length == 3)
                 {
-                    var blob = container.GetBlockBlobClient(blobName);
+                    var containerName = blobId[1];
+                    var blobName = blobId[2];
+                    var container = blobService.GetBlobContainerClient(containerName);
 
-                    return new AzureBlobFileInfo(blob);
+                    if (container.Exists())
+                    {
+                        var blob = container.GetBlockBlobClient(blobName);
+
+                        return new AzureBlobFileInfo(blob);
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Container with name {containerName} does not exist.");
+                    }
                 }
                 else
                 {
-                    throw new ArgumentException($"Container with name {containerName} does not exist.");
+                    throw new ArgumentException("Path must contain {container}/{blob}");
                 }
             }
             else
             {
-                throw new ArgumentException("Path must contain {container}/{blob}");
+                throw new ArgumentException($"Invalid storage name: '{storageName}'.");
             }
         }
 

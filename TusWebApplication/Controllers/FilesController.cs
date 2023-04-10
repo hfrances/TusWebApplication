@@ -24,26 +24,27 @@ namespace TusWebApplication.Controllers
         /// <summary>
         /// Returns assembly the assembly version.
         /// </summary>
-        [HttpGet("{container}/{blob}/details")]
-        public Task<FileDto> GetFilebyIdAsync(string container, string blob, [FromQuery] GetFileByIdQuery.RequestParameters parameters)
+        [HttpGet("{store}/{container}/{blob}/details")]
+        public Task<FileDto> GetFilebyIdAsync(string store, string container, string blob, [FromQuery] GetFileByIdQuery.RequestParameters parameters)
             => Send(new GetFileByIdQuery
             {
+                StoreName = store,
                 ContainerName = container,
                 BlobName = blob,
                 Parameters = parameters
             });
 
-        [HttpGet("{container}/{blob}")]
-        public async Task<IActionResult> Download(string container, string blob)
+        [HttpGet("{store}/{container}/{blob}")]
+        public async Task<IActionResult> Download(string store, string container, string blob)
         {
-            var rdo = await GetFilebyIdAsync(container, blob, new GetFileByIdQuery.RequestParameters
+            var rdo = await GetFilebyIdAsync(store, container, blob, new GetFileByIdQuery.RequestParameters
             {
                 GenerateSas = true
             });
 
             if (rdo.Url != null)
             {
-                var fileInfo = AzureBlobFileProvider.GetFileInfo($"{container}/{blob}");
+                var fileInfo = AzureBlobFileProvider.GetFileInfo($"{store}/{container}/{blob}");
 
                 return File(fileInfo.CreateReadStream(), "application/octet-stream", fileInfo.Name);
             }
@@ -57,10 +58,11 @@ namespace TusWebApplication.Controllers
         /// <summary>
         /// Renames a file.
         /// </summary>
-        [HttpPut("{container}/{blob}/rename")]
-        public Task RenameFileAsync(string container, string blob, [FromBody] RenameFileCommand.CommandBody body)
+        [HttpPut("{store}/{container}/{blob}/rename")]
+        public Task RenameFileAsync(string store, string container, string blob, [FromBody] RenameFileCommand.CommandBody body)
             => Send(new RenameFileCommand
             {
+                StoreName = store,
                 ContainerName = container,
                 BlobName = blob,
                 Body = body

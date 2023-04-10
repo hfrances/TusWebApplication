@@ -1,5 +1,4 @@
 ﻿using MediatR;
-using Microsoft.AspNetCore.Mvc;
 
 namespace TusWebApplication.Application.Files.Commands
 {
@@ -15,8 +14,9 @@ namespace TusWebApplication.Application.Files.Commands
 
         }
 
-        public string? ContainerName { get; set; }
-        public string? BlobName { get; set; }
+        public string StoreName { get; set; } = string.Empty;
+        public string ContainerName { get; set; } = string.Empty;
+        public string BlobName { get; set; } = string.Empty;
         public CommandBody? Body { get; set; }
 
     }

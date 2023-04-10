@@ -68,7 +68,7 @@ namespace TusWebApplication.TusAzure
                                       // Begin
                                       block.Status = QueueItemStatus.Started;
                                       blobInfo.QueuePosition += 1;
-                                      Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
+                                      Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
 
                                       // Calculate MD5 block.
                                       var buffer = new byte[block.Length];
@@ -85,14 +85,14 @@ namespace TusWebApplication.TusAzure
                                       block.Status = QueueItemStatus.Done;
                                       block.Dispose();
                                       blobInfo.Queue.Remove(block);
-                                      Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
+                                      Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
                                       GC.Collect();
                                   }
                               }
                           }
                           catch (Exception ex)
                           {
-                              Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. BlockId: {blockId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                              Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {blockId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
                               throw;
                           }
 
@@ -107,9 +107,9 @@ namespace TusWebApplication.TusAzure
                                   var commitOptions = TusAzureHelper.CreateCommitBlockListOptions(blobInfo);
                                   var contentHash = commitOptions.HttpHeaders.ContentHash;
 
-                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. Hash: {Convert.ToBase64String(contentHash ?? Array.Empty<byte>())}. Commiting...");
+                                  Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. ThreadId: {threadId}. Hash: {Convert.ToBase64String(contentHash ?? Array.Empty<byte>())}. Commiting...");
                                   await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
-                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                                  Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. ThreadId: {threadId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
 
                                   // Validate.
                                   var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
@@ -120,7 +120,7 @@ namespace TusWebApplication.TusAzure
                               }
                               catch (Exception ex)
                               {
-                                  Console.WriteLine($"FileId: {blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                                  Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
                                   throw;
                               }
                               finally

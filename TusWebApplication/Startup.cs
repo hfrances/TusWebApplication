@@ -6,13 +6,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using qckdev.Extensions.Configuration;
 using System;
-using System.IO;
-using System.Linq;
 using System.Text.Json.Serialization;
-using tusdotnet;
-using tusdotnet.Models;
 using TusWebApplication.Application;
 using TusWebApplication.Swagger;
+using TusWebApplication.TusAzure;
 
 namespace TusWebApplication
 {
@@ -29,26 +26,15 @@ namespace TusWebApplication
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            var azureStorageCredentialSettings = this.Configuration.GetSection("AzureStorageCredential").Get<TusAzure.AzureStorageCredentialSettings>();
-            var azureStorageCredentialSettings2 = this.Configuration.GetSection("AzureStorageCredential").Get<AzureBlobProvider.AzureStorageCredentialSettings>();
-
-
             services.AddCors(opts => opts.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
 
-            services.AddApplication();
-            services.AddScoped<AzureBlobProvider.AzureBlobFileProvider>();
-            services.AddSingleton(x => new TusAzure.TusAzureStoreQueued(
-                azureStorageCredentialSettings.AccountName ?? string.Empty,
-                azureStorageCredentialSettings.AccountKey ?? string.Empty,
-                azureStorageCredentialSettings.DefaultContainer ?? string.Empty
-            ));
-            services.AddSingleton(x => new TusAzure.TusAzureStore(
-                azureStorageCredentialSettings.AccountName ?? string.Empty,
-                azureStorageCredentialSettings.AccountKey ?? string.Empty,
-                azureStorageCredentialSettings.DefaultContainer ?? string.Empty
-            ));
-            services.Configure(azureStorageCredentialSettings);
-            services.Configure(azureStorageCredentialSettings2);
+            services.Configure<AzureBlobProvider.AzureStorageCredentialsSettings>(options =>
+                this.Configuration.GetSection("AzureStorageCredentials").Bind(options)
+            );
+
+            services
+                .AddApplication()
+                .AddTusAzure();
 
             services.AddControllers()
                 .AddJsonOptions(options =>
@@ -63,26 +49,6 @@ namespace TusWebApplication
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             var basePath = this.Configuration.GetSection("BasePath")?.Value ?? "/";
-            var combineUrl = new Func<string, string, string>((string basePath, string urlPath) =>
-            {
-                string rdo;
-
-                if (string.IsNullOrEmpty(basePath))
-                {
-                    rdo = urlPath;
-                }
-                else
-                {
-                    int startIndex = 0;
-
-                    if (basePath.EndsWith("/") && urlPath.StartsWith("/"))
-                    {
-                        startIndex = 1;
-                    }
-                    rdo = $"{basePath}{urlPath[startIndex..]}";
-                }
-                return rdo;
-            });
 
             app.UseCors();
 
@@ -98,21 +64,7 @@ namespace TusWebApplication
 
             app.UseSerializedExceptionHandler();
 
-            app.UseTus(httpContext => new DefaultTusConfiguration
-            {
-                Store = app.ApplicationServices.GetService<TusAzure.TusAzureStoreQueued>(),
-                UrlPath = combineUrl(basePath, "/api/filesQueued"),
-                MetadataParsingStrategy = MetadataParsingStrategy.AllowEmptyValues,
-                UsePipelinesIfAvailable = true,
-            });
-
-            app.UseTus(httpContext => new DefaultTusConfiguration
-            {
-                Store = app.ApplicationServices.GetService<TusAzure.TusAzureStore>(),
-                UrlPath = combineUrl(basePath, "/api/files"),
-                MetadataParsingStrategy = MetadataParsingStrategy.AllowEmptyValues,
-                UsePipelinesIfAvailable = true,
-            });
+            app.UseTusAzure(basePath);
 
             app.UseEndpoints(endpoints =>
             {

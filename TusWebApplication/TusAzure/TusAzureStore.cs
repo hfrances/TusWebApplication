@@ -49,7 +49,7 @@ namespace TusWebApplication.TusAzure
                 blobInfo.QueuePosition += 1;
                 using (var memo = new MemoryStream())
                 {
-                    Console.WriteLine($"FileId: {blobInfo.FileId}. BlockId: {blockId}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
+                    Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. BlockId: {blockId}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
 
                     await stream.CopyToAsync(memo, cancellationToken);
                     memo.Position = 0;
@@ -66,7 +66,7 @@ namespace TusWebApplication.TusAzure
                     _ = await blobInfo.Blob.StageBlockAsync(blockId, memo, cancellationToken: cancellationToken);
                     blobInfo.SizeOffset += length;
                     blobInfo.BlockNames.Add(blockId);
-                    Console.WriteLine($"FileId: {blobInfo.FileId}. BlockId: {blockId}. Done.");
+                    Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. BlockId: {blockId}. Done.");
                 }
                 if (blobInfo.SizeOffset == blobInfo.UploadLength)
                 {
