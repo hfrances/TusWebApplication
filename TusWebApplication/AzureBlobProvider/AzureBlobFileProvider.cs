@@ -1,5 +1,4 @@
-﻿using Azure.Core;
-using Azure.Storage.Blobs.Specialized;
+﻿using Azure.Storage.Blobs.Specialized;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Primitives;
@@ -20,7 +19,8 @@ namespace TusWebApplication.AzureBlobProvider
 
         public IFileInfo GetFileInfo(string subpath)
         {
-            var blobId = subpath.Split('/');
+            var url = new Uri(new Uri("http://localhost"), subpath);
+            var blobId = url.AbsolutePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
             var storageName = blobId.First();
 
             if (AzureSettings.TryGetValue(storageName, out AzureStorageCredentialSettings? settings))
@@ -38,8 +38,14 @@ namespace TusWebApplication.AzureBlobProvider
 
                     if (container.Exists())
                     {
+                        var query = System.Web.HttpUtility.ParseQueryString(url.Query);
+                        var versionId = query.Get("versionId");
                         var blob = container.GetBlockBlobClient(blobName);
 
+                        if (!string.IsNullOrWhiteSpace(versionId))
+                        {
+                            blob = blob.WithVersion(versionId);
+                        }
                         return new AzureBlobFileInfo(blob);
                     }
                     else

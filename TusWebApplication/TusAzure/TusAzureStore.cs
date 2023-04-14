@@ -15,19 +15,25 @@ namespace TusWebApplication.TusAzure
 
         protected Azure.Storage.Blobs.BlobServiceClient BlobService { get; }
         protected string DefaultContainer { get; }
-        protected Dictionary<string, BlobInfo> Blobs { get; } = new Dictionary<string, BlobInfo>();
+        public Dictionary<string, BlobInfo> Blobs { get; } = new Dictionary<string, BlobInfo>();
 
-        public TusAzureStore(string accountName, string accountKey, string defaultContainer)
+
+        public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer)
         {
+            this.StoreName = storeName;
             this.BlobService = TusAzureHelper.CreateBlobServiceClient(accountName, accountKey);
             this.DefaultContainer = defaultContainer;
         }
 
-        public TusAzureStore(Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer)
+        public TusAzureStore(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer)
         {
+            this.StoreName = storeName;
             this.BlobService = blobService;
             this.DefaultContainer = defaultContainer;
         }
+
+
+        public string StoreName { get; }
 
         public virtual async Task<long> AppendDataAsync(string fileId, Stream stream, CancellationToken cancellationToken)
         {
@@ -42,65 +48,79 @@ namespace TusWebApplication.TusAzure
             // Procesar bloque.
             try
             {
-                var blockId = $"{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(blobInfo.BlockNames.Count.ToString("d6")))}";
-                long length = 0;
 
-                blobInfo.QueueCount += 1;
-                blobInfo.QueuePosition += 1;
-                using (var memo = new MemoryStream())
+                if (blobInfo.Blob == null)
                 {
-                    Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. BlockId: {blockId}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
-
-                    await stream.CopyToAsync(memo, cancellationToken);
-                    memo.Position = 0;
-                    length = memo.Length;
-
-                    // Calculate MD5 block.
-                    var buffer = new byte[length];
-                    int readed;
-                    readed = await stream.ReadAsync(buffer.AsMemory(0, (int)length), cancellationToken);
-                    blobInfo.Hasher.TransformBlock(buffer, 0, readed, null, 0);
-                    memo.Position = 0;
-
-                    // Upload block.
-                    _ = await blobInfo.Blob.StageBlockAsync(blockId, memo, cancellationToken: cancellationToken);
-                    blobInfo.SizeOffset += length;
-                    blobInfo.BlockNames.Add(blockId);
-                    Console.WriteLine($"FileId: {BlobService.AccountName}/{blobInfo.FileId}. BlockId: {blockId}. Done.");
+                    throw new NullReferenceException("Blob object is null.");
                 }
-                if (blobInfo.SizeOffset == blobInfo.UploadLength)
+                else
                 {
-                    try
+                    var blockId = $"{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(blobInfo.BlockNames.Count.ToString("d6")))}";
+                    long length = 0;
+
+                    blobInfo.QueueCount += 1;
+                    blobInfo.QueuePosition += 1;
+                    using (var memo = new MemoryStream())
                     {
-                        blobInfo.Hasher.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+                        Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. BlockId: {blockId}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
 
-                        // Commit
-                        var commitOptions = TusAzureHelper.CreateCommitBlockListOptions(blobInfo);
-                        var contentHash = commitOptions.HttpHeaders.ContentHash;
+                        await stream.CopyToAsync(memo, cancellationToken);
+                        memo.Position = 0;
+                        length = memo.Length;
 
-                        Console.WriteLine($"FileId: {blobInfo.FileId}. Hash: {Convert.ToBase64String(contentHash ?? Array.Empty<byte>())}. Commiting...");
-                        await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
-                        Console.WriteLine($"FileId: {blobInfo.FileId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                        // Calculate MD5 block.
+                        var buffer = new byte[length];
+                        int readed;
+                        readed = await stream.ReadAsync(buffer.AsMemory(0, (int)length), cancellationToken);
+                        blobInfo.Hasher.TransformBlock(buffer, 0, readed, null, 0);
+                        memo.Position = 0;
 
-                        // Validate.
-                        var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
-                        var blob = container.GetBlobClient(blobInfo.BlobName);
-                        blob.GetHashCode();
-                        var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
-                        uri.ToString();
+                        // Upload block.
+                        _ = await blobInfo.Blob.StageBlockAsync(blockId, memo, cancellationToken: cancellationToken);
+                        blobInfo.SizeOffset += length;
+                        blobInfo.BlockNames.Add(blockId);
+                        Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. BlockId: {blockId}. Done.");
                     }
-                    finally
+                    if (blobInfo.SizeOffset == blobInfo.UploadLength)
                     {
-                        blobInfo.Dispose();
-                        Blobs.Remove(blobInfo.FileId);
+                        try
+                        {
+                            blobInfo.Hasher.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+                            // Commit
+                            var commitOptions = TusAzureHelper.CreateCommitBlockListOptions(blobInfo);
+                            var contentHash = commitOptions.HttpHeaders.ContentHash;
+
+                            Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. Hash: {Convert.ToBase64String(contentHash ?? Array.Empty<byte>())}. Commiting...");
+                            await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
+                            Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+
+                            // Validate.
+                            var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
+                            var blob = container.GetBlobClient(blobInfo.BlobName);
+                            blob.GetHashCode();
+                            var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
+                            uri.ToString();
+                            Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                        }
+                        catch (Exception ex)
+                        {
+                            blobInfo.Error = ex;
+                            throw;
+                        }
+                        finally
+                        {
+                            blobInfo.Done = true;
+                            blobInfo.Dispose();
+                        }
                     }
+                    GC.Collect();
+                    return length;
                 }
-                GC.Collect();
-                return length;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"FileId: {blobInfo.FileId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
                 throw;
             }
         }
@@ -109,6 +129,8 @@ namespace TusWebApplication.TusAzure
         {
             var container = TusAzureHelper.GetContainer(this.BlobService, metadata, this.DefaultContainer);
             var blobName = TusAzureHelper.GetBlobName(metadata);
+            var useQueueAsync = TusAzureHelper.GetUseQueueAsync(metadata);
+            var fileName = TusAzureHelper.GetFileName(metadata);
             string blobId;
             BlockBlobClient blob;
 
@@ -125,10 +147,10 @@ namespace TusWebApplication.TusAzure
 
                 if (allowReplace != true)
                 {
-                    throw new ArgumentException($"Blob {blobId} already exists. Set 'replace' argument for overwrite it.");
+                    throw new ArgumentException($"Blob {this.StoreName}/{blobId} already exists. Set 'replace' argument for overwrite it.");
                 }
             }
-            Blobs.Add(blobId, new BlobInfo(blobId, blob.BlobContainerName, blob.Name, metadata, uploadLength, blob));
+            Blobs.Add(blobId, new BlobInfo(blobId, blob.BlobContainerName, blob.Name, fileName, metadata, uploadLength, useQueueAsync, blob));
             return blobId;
         }
 

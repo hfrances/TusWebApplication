@@ -35,9 +35,12 @@ namespace TusWebApplication.Controllers.Base
             {
                 return await Mediator.Send(request, cancellationToken);
             }
+            catch (qckdev.AspNetCore.HttpHandledException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                Logger.LogError(ex.Message);
 #if NET5_0_OR_GREATER
                 throw new BadHttpRequestException(ex.Message, ex);
 #else
@@ -45,6 +48,6 @@ namespace TusWebApplication.Controllers.Base
 #endif
             }
         }
-
+        
     }
 }

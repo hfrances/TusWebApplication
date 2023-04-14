@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Dtos;
 using TusWebApplication.Application.Files.Queries;
+using TusWebApplication.Application.Files.Helpers;
+using System.ComponentModel;
 
 namespace TusWebApplication.Application.Files.Handlers
 {
@@ -17,59 +19,58 @@ namespace TusWebApplication.Application.Files.Handlers
     {
 
         AzureBlobProvider.AzureStorageCredentialsSettings AzureSettings { get; }
+        TusAzure.IBlobManager TusAzureBlobManager { get; }
 
-        public GetFileByIdQueryHandlers(IOptions<AzureBlobProvider.AzureStorageCredentialsSettings> azureOptions)
+        public GetFileByIdQueryHandlers(
+            IOptions<AzureBlobProvider.AzureStorageCredentialsSettings> azureOptions,
+            TusAzure.IBlobManager tusAzureBlobManager)
         {
             this.AzureSettings = azureOptions.Value;
+            this.TusAzureBlobManager = tusAzureBlobManager;
         }
 
-        public async Task<FileDto> Handle(GetFileByIdQuery request, CancellationToken cancellationToken)
-        {
-
-            if (AzureSettings.TryGetValue(request.StoreName, out AzureBlobProvider.AzureStorageCredentialSettings? settings))
-            {
-                var blobService = AzureBlobProvider.AzureBlobHelper.CreateBlobServiceClient(
-                    settings.AccountName ?? string.Empty,
-                    settings.AccountKey ?? string.Empty
-                );
-                var container = blobService.GetBlobContainerClient(request.ContainerName);
-
-                if (await container.ExistsAsync(cancellationToken))
+        public Task<FileDto> Handle(GetFileByIdQuery request, CancellationToken cancellationToken)
+            => BlobHelper.LoadBlob(
+                AzureSettings, TusAzureBlobManager,
+                request.StoreName, request.ContainerName, request.BlobName, request.Parameters?.VersionId,
+                async (internalBlob, container, blob, cancellationToken) =>
                 {
-                    BlobClient blob;
-                    BlobProperties properties;
-                    IDictionary<string, string> tags;
-                    IEnumerable<FileVersionDto>? blobVersions = null;
-                    Uri uri;
 
-                    // Obtener el blob.
-                    blob = container.GetBlobClient(request.BlobName);
-                    if (await blob.ExistsAsync(cancellationToken))
+                    if (blob == null || container == null)
                     {
-                        // Obtener versión si se ha especificado (sino estamos cogiendo la última).
-                        if (!string.IsNullOrEmpty(request.Parameters.VersionId))
+                        if (internalBlob == null)
                         {
-                            blob = blob.WithVersion(request.Parameters.VersionId);
-                            if (!await blob.ExistsAsync(cancellationToken))
-                            {
-                                throw new Exceptions.BlobVersionNotFoundException();
-                            }
+                            // Condición controlada en LoadBlob.
+                            // Aquí o llega el blob con valor, o llega el internalBlob con valor, pero no pueden llegar ambos sin valor.
+                            throw new NullReferenceException();
                         }
+                        else
+                        {
+                            return new FileDto
+                            {
+                                BlobId = internalBlob.BlobId,
+                                Name = internalBlob.Name,
+                                Length = internalBlob.Length,
+                                Status = (FileDto.UploadStatus)internalBlob.Status,
+                                UploadPercentage = internalBlob.RemotePercentage
+                            };
+                        }
+                    }
+                    else
+                    {
+                        BlobProperties properties;
+                        IDictionary<string, string> tags;
+                        IEnumerable<FileVersionDto>? blobVersions = null;
+                        Uri uri;
+
                         properties = (await blob.GetPropertiesAsync(cancellationToken: cancellationToken)).Value;
                         tags = (await blob.GetTagsAsync(cancellationToken: cancellationToken)).Value.Tags;
 
                         // Generar url.
-                        if (request.Parameters.GenerateSas && blob.CanGenerateSasUri) // Se ha pedido generar el token de acceso y el blob es privado.
-                        {
-                            uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
-                        }
-                        else
-                        {
-                            uri = blob.Uri;
-                        }
+                        uri = blob.Uri;
 
                         // Obtener versiones.
-                        if (request.Parameters.LoadVersions && !string.IsNullOrEmpty(properties.VersionId)) // Se ha pedido la lista de versiones y el blob soporta versionado.
+                        if (request.Parameters != null && request.Parameters.LoadVersions && !string.IsNullOrEmpty(properties.VersionId)) // Se ha pedido la lista de versiones y el blob soporta versionado.
                         {
                             // https://learn.microsoft.com/en-us/azure/storage/blobs/versioning-enable?source=recommendations&tabs=portal#list-blob-versions
                             blobVersions = container
@@ -98,21 +99,10 @@ namespace TusWebApplication.Application.Files.Handlers
                             Versions = blobVersions
                         };
                     }
-                    else
-                    {
-                        throw new Exceptions.BlobNotFoundException();
-                    }
-                }
-                else
-                {
-                    throw new Exceptions.ContainerNotFoundException();
-                }
-            }
-            else
-            {
-                throw new Exceptions.BlobStorageNotFoundException();
-            }
-        }
+                },
+                cancellationToken
+            );
+
     }
 
 }

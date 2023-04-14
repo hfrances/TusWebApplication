@@ -1,9 +1,9 @@
 ﻿using MediatR;
+using System;
 
 namespace TusWebApplication.Application.Files.Queries
 {
-
-    public sealed class GetFileByIdQuery : IRequest<Dtos.FileDto>
+    public sealed class DownloadFileQuery : IRequest<Microsoft.Extensions.FileProviders.IFileInfo>
     {
 
         public sealed class RequestParameters
@@ -13,9 +13,17 @@ namespace TusWebApplication.Application.Files.Queries
             /// </summary>
             public string? VersionId { get; set; }
             /// <summary>
-            /// Gets or sets if it must load version list.
+            /// Sas token version.
             /// </summary>
-            public bool LoadVersions { get; set; }
+            public string? Sv { get; set; }
+            /// <summary>
+            /// Expires on in UTC format.
+            /// </summary>
+            public DateTimeOffset? Se { get; set; }
+            /// <summary>
+            /// Signature for validating Sas token.
+            /// </summary>
+            public string? Sig { get; set; }
         }
 
         public string StoreName { get; set; } = string.Empty;
@@ -23,6 +31,6 @@ namespace TusWebApplication.Application.Files.Queries
         public string BlobName { get; set; } = string.Empty;
         public RequestParameters Parameters { get; set; } = new RequestParameters();
 
-    }
 
+    }
 }

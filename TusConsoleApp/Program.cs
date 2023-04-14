@@ -19,6 +19,7 @@ namespace TusConsoleApp
                 var containerName = commandArgs.TryGetValue("container", string.Empty);
                 var blobName = commandArgs.TryGetValue("blob", string.Empty);
                 var replace = commandArgs.TryGetValue("replace", "false").In("", "true");
+                var useQueueAsync = commandArgs.TryGetValue("useQueueAsync", "false").In("", "true");
 
                 if (commandArgs.TryGetValue("0", out string fileName))
                 {
@@ -35,12 +36,14 @@ namespace TusConsoleApp
                            ("BLOB:container", containerName),
                            ("BLOB:name", blobName),
                            ("BLOB:replace", replace.ToString()),
+                           ("BLOB:useQueueAsync", useQueueAsync.ToString()),
                            ("TAG:extension", file.Extension),
                            ("factor", "1,2")
                         });
-                        (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
-                        var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
+                        Console.WriteLine($"File:\t\t{fileUrl}");
 
+                        var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
+                        (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
                         uploadOperation.Progressed += (transferred, total) =>
                         {
                             Console.SetCursorPosition(position.Left, position.Top);
@@ -49,7 +52,6 @@ namespace TusConsoleApp
                         await uploadOperation;
                         Console.WriteLine();
                         Console.WriteLine($"Elapsed time:\t{stw.Elapsed}");
-                        Console.WriteLine($"File:\t\t{fileUrl}");
 
                         /* Calculate Hash */
                         string contentHash;

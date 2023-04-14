@@ -32,7 +32,6 @@ namespace TusWebApplication.Swagger
                     Description = string.Join("<br>", GetDescription(Assembly)),
                 });
                 c.DocumentFilter<CustomDocumentFilter>();
-
                 c.IncludeXmlComments(assembly);
             });
             return services;

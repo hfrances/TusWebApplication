@@ -12,7 +12,7 @@ namespace TusWebApplication.TusAzure
 
         public static IServiceCollection AddTusAzure(this IServiceCollection services)
         {
-            
+
             services.AddSingleton(factory =>
             {
                 var tusAzureStores = new TusAzureStoreDictionary();
@@ -23,6 +23,7 @@ namespace TusWebApplication.TusAzure
                     foreach (var pair in settings)
                     {
                         tusAzureStores.Add(pair.Key, new TusAzureStoreQueued(
+                            pair.Key,
                             pair.Value?.AccountName ?? string.Empty,
                             pair.Value?.AccountKey ?? string.Empty,
                             pair.Value?.DefaultContainer ?? string.Empty
@@ -31,6 +32,7 @@ namespace TusWebApplication.TusAzure
                 }
                 return tusAzureStores;
             });
+            services.AddScoped<IBlobManager, BlobManager>();
             return services;
         }
 
