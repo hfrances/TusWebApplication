@@ -33,6 +33,28 @@ namespace TusWebApplication.Swagger
                 });
                 c.DocumentFilter<CustomDocumentFilter>();
                 c.IncludeXmlComments(assembly);
+
+                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    BearerFormat = "JWT",
+                    Scheme = "Bearer",
+                    Description = "Type here tu JWT con Bearer",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.ApiKey
+                });
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = "Bearer"
+                        }
+                    },
+                    Array.Empty<string>()
+                }});
             });
             return services;
         }

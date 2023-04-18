@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Infrastructure;
+using qckdev.AspNetCore.Mvc.Filters.IpSafe;
 using System;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Commands;
@@ -11,7 +11,7 @@ namespace TusWebApplication.Controllers
 {
 
     [Route("api/files")]
-    [ApiController, AllowAnonymous]
+    [ApiController, Authorize, IpSafeFilter]
     public class FilesController : Base.ApiControllerBase
     {
 
@@ -21,7 +21,7 @@ namespace TusWebApplication.Controllers
         /// <param name="store">Store name</param>
         /// <param name="container">Container name</param>
         /// <param name="blob">Blob name</param>
-        [HttpGet("{store}/{container}/{blob}")]
+        [HttpGet("{store}/{container}/{blob}"), AllowAnonymous]
         public async Task<IActionResult> Download(string store, string container, string blob, [FromQuery] DownloadFileQuery.RequestParameters parameters)
         {
             var fileInfo = await Send(new DownloadFileQuery
