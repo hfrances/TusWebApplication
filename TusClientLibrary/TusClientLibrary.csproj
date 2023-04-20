@@ -1,8 +1,8 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFrameworks>net6.0;net461</TargetFrameworks>
+    <Version>0.1.0-alpha</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,10 +10,6 @@
     <PackageReference Include="qckdev.Net.Http" Version="1.0.0" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
     <PackageReference Include="TusDotNetClient" Version="1.2.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\TusClientLibrary\TusClientLibrary.csproj" />
   </ItemGroup>
 
 </Project>

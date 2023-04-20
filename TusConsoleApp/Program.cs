@@ -10,7 +10,7 @@ using qckdev.Net.Http;
 using System.Configuration;
 using TusConsoleApp.Configuration;
 using System.Collections.Generic;
-using TusConsoleApp.TusServiceClient;
+using TusClientLibrary;
 
 namespace TusConsoleApp
 {

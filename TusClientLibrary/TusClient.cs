@@ -3,9 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
-using TusConsoleApp.TusServiceClient;
 
-namespace TusConsoleApp.TusServiceClient
+namespace TusClientLibrary
 {
 
     public sealed partial class TusClient
