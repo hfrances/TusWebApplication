@@ -5,17 +5,25 @@ using qckdev.Linq;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net.Http;
+using qckdev.Net.Http;
+using System.Configuration;
+using TusConsoleApp.Configuration;
+using System.Collections.Generic;
+using TusConsoleApp.TusServiceClient;
 
 namespace TusConsoleApp
 {
     static class Program
     {
-        static async Task Main(string[] args)
-        {
-            var commandArgs = qckdev.CommandArgsDictionary.Create(args);
 
-            if (commandArgs.TryGetValue("address", out string serverUrl))
+        static void Main(string[] args)
+        {
+            var commandArgs = CommandArgsDictionary.Create(args);
+
+            if (commandArgs.TryGetValue("store", out string storeName))
             {
+                var settings = (TusSettings)ConfigurationManager.GetSection("applicationSettings/tusSettings");
                 var containerName = commandArgs.TryGetValue("container", string.Empty);
                 var blobName = commandArgs.TryGetValue("blob", string.Empty);
                 var replace = commandArgs.TryGetValue("replace", "false").In("", "true");
@@ -31,25 +39,34 @@ namespace TusConsoleApp
 
                         /* Upload file */
                         var stw = System.Diagnostics.Stopwatch.StartNew();
-                        var client = new TusDotNetClient.TusClient();
-                        var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
-                           ("BLOB:container", containerName),
-                           ("BLOB:name", blobName),
-                           ("BLOB:replace", replace.ToString()),
-                           ("BLOB:useQueueAsync", useQueueAsync.ToString()),
-                           ("TAG:extension", file.Extension),
-                           ("factor", "1,2")
-                        });
+                        var client = new TusClient(
+                            new Uri(settings.BaseAddress), new TusClientCredentials
+                            {
+                                UserName = settings.UserName,
+                                Login = settings.Login,
+                                Password = settings.Password
+                            });
+                        var fileUrl = client.CreateFile(
+                            file, storeName, containerName,
+                            blobName, replace,
+                            new Dictionary<string, string>
+                            {
+                                { "extension", file.Extension }
+                            },
+                            new Dictionary<string, string>
+                            {
+                                { "factor", "1,2" }
+                            },
+                            useQueueAsync
+                        );
                         Console.WriteLine($"File:\t\t{fileUrl}");
 
-                        var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
                         (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
-                        uploadOperation.Progressed += (transferred, total) =>
+                        client.Upload(fileUrl, file, 5D, (transferred, total) =>
                         {
                             Console.SetCursorPosition(position.Left, position.Top);
                             Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
-                        };
-                        await uploadOperation;
+                        });
                         Console.WriteLine();
                         Console.WriteLine($"Elapsed time:\t{stw.Elapsed}");
 
@@ -63,6 +80,11 @@ namespace TusConsoleApp
                             }
                         }
                         Console.WriteLine($"Hash:\t\t{contentHash}");
+
+                        /* Generate SAS */
+                        string sasUrl;
+                        sasUrl = client.GenerateSasUrl(fileUrl, TimeSpan.FromMinutes(10));
+                        Console.WriteLine($"Url SAS:\t{sasUrl}");
                     }
                     else
                     {
@@ -81,5 +103,6 @@ namespace TusConsoleApp
             Console.WriteLine();
             //Console.ReadKey();
         }
+
     }
 }
