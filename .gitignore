@@ -364,3 +364,4 @@ FodyWeavers.xsd
 
 # Custom
 appsettings.[Dd]evelopment.json
+App.config
