@@ -17,16 +17,13 @@ namespace TusWebApplication.Application.Files.Handlers
 
         AzureBlobProvider.AzureStorageCredentialsSettings AzureSettings { get; }
         TusAzure.IBlobManager TusAzureBlobManager { get; }
-        IHttpContextAccessor HttpContextAccessor { get; }
 
         public GenerateSasTokenFromFileIdCommandHandler(
             IOptions<AzureBlobProvider.AzureStorageCredentialsSettings> azureOptions,
-            TusAzure.IBlobManager tusAzureBlobManager,
-            IHttpContextAccessor httpContextAccessor)
+            TusAzure.IBlobManager tusAzureBlobManager)
         {
             this.AzureSettings = azureOptions.Value;
             this.TusAzureBlobManager = tusAzureBlobManager;
-            this.HttpContextAccessor = httpContextAccessor;
         }
 
         public Task<string> Handle(GenerateSasTokenFromFileIdCommand request, CancellationToken cancellationToken)
@@ -39,12 +36,8 @@ namespace TusWebApplication.Application.Files.Handlers
                         {
                             var properties = (await blob.GetPropertiesAsync(cancellationToken: cancellationToken)).Value;
                             var token = SasHelper.GenerateSasHash(request.Body.ExpiresOn, blob, properties);
-                            var builder = new UriBuilder($"{HttpContextAccessor.HttpContext.Request.Scheme}://{HttpContextAccessor.HttpContext.Request.Host.Value}")
-                            {
-                                Path = string.Join("/", HttpContextAccessor.HttpContext.Request.Path.Value.Split('/').SkipLast(1))
-                            };
+                            var query = new Dictionary<string, string?>();
                             
-                            var query = new Dictionary<string, string>();
                             if (request.Parameters?.VersionId != null)
                             {
                                 query.Add("versionId", request.Parameters.VersionId);
@@ -52,8 +45,7 @@ namespace TusWebApplication.Application.Files.Handlers
                             query.Add("sv", "1");
                             query.Add("se", request.Body.ExpiresOn.ToString("s"));
                             query.Add("sig", token);
-                            builder.Query = QueryHelpers.AddQueryString("", query);
-                            return builder.Uri.AbsoluteUri;
+                            return QueryHelpers.AddQueryString("", query);
 
                         }, cancellationToken),
                 cancellationToken);

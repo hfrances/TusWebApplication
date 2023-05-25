@@ -73,13 +73,32 @@ namespace TusClientLibrary
 
         public async Task<string> GenerateSasUrlAsync(string fileUrl, TimeSpan expiresOn)
         {
-            var requestUrl = new Uri($"{fileUrl}/generateSas");
+            var fileUri = new Uri(fileUrl);
+            UriBuilder requestUri;
+            UriBuilder result;
+            IDictionary<string, string> queryParameters, queryParametersSas;
 
-            await AuthorizeAsync();
-            return await InnerHttpClient.FetchAsync<string>(HttpMethod.Post, requestUrl.OriginalString, new
+            Authorize();
+            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/generateSas")
+            {
+                Query = fileUri.Query
+            };
+
+            // Get URL queries, original and SAS token and merge them for the result.
+            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            queryParametersSas = HttpUtility.ParseQueryString(await InnerHttpClient.FetchAsync<string>(HttpMethod.Post, requestUri.Uri.OriginalString, new
             {
                 expiresOn = DateTimeOffset.Now.Add(expiresOn)
-            });
+            }));
+            foreach (var parameter in queryParametersSas)
+            {
+                queryParameters.Add(parameter.Key, parameter.Value);
+            }
+            result = new UriBuilder(fileUrl)
+            {
+                Query = HttpUtility.BuildQueryString(queryParameters)
+            };
+            return result.ToString();
         }
 
         private async Task AuthorizeAsync()

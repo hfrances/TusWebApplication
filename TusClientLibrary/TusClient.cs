@@ -95,13 +95,32 @@ namespace TusClientLibrary
 
         public string GenerateSasUrl(string fileUrl, TimeSpan expiresOn)
         {
-            var requestUrl = new Uri($"{fileUrl}/generateSas");
+            var fileUri = new Uri(fileUrl);
+            UriBuilder requestUri;
+            UriBuilder result;
+            IDictionary<string, string> queryParameters, queryParametersSas;
 
             Authorize();
-            return InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUrl.OriginalString, new
+            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/generateSas")
+            {
+                Query = fileUri.Query
+            };
+            
+            // Get URL queries, original and SAS token and merge them for the result.
+            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            queryParametersSas = HttpUtility.ParseQueryString(InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.OriginalString, new
             {
                 expiresOn = DateTimeOffset.Now.Add(expiresOn)
-            });
+            }));
+            foreach (var parameter in queryParametersSas)
+            {
+                queryParameters.Add(parameter.Key, parameter.Value);
+            }
+            result = new UriBuilder(fileUrl)
+            {
+                Query = HttpUtility.BuildQueryString(queryParameters)
+            };
+            return result.ToString();
         }
 
         private void Authorize()

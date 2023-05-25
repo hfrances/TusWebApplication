@@ -54,7 +54,7 @@ namespace TusWebApplication.Application.Files.Helpers
                     }
                     else
                     {
-                        return await action(internalBlob, null, null, cancellationToken);
+                        return await action(internalBlob, container, null, cancellationToken);
                     }
                 }
                 else
