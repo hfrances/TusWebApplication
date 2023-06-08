@@ -108,7 +108,7 @@ namespace TusClientLibrary
             
             // Get URL queries, original and SAS token and merge them for the result.
             queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
-            queryParametersSas = HttpUtility.ParseQueryString(InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.OriginalString, new
+            queryParametersSas = HttpUtility.ParseQueryString(InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.ToString(), new
             {
                 expiresOn = DateTimeOffset.Now.Add(expiresOn)
             }));
@@ -116,11 +116,11 @@ namespace TusClientLibrary
             {
                 queryParameters.Add(parameter.Key, parameter.Value);
             }
-            result = new UriBuilder(fileUrl)
+            result = new UriBuilder(new Uri(fileUrl))
             {
                 Query = HttpUtility.BuildQueryString(queryParameters)
             };
-            return result.ToString();
+            return result.Uri.ToString();
         }
 
         private void Authorize()
