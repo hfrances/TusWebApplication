@@ -19,8 +19,7 @@ namespace TusWebApplication.Application.Files.Helpers
             if (azureSettings.TryGetValue(storeName, out AzureBlobProvider.AzureStorageCredentialSettings? settings))
             {
                 var blobService = AzureBlobProvider.AzureBlobHelper.CreateBlobServiceClient(
-                settings.AccountName ?? string.Empty,
-                    settings.AccountKey ?? string.Empty
+                    settings.AccountName, settings.AccountKey
                 );
                 var container = blobService.GetBlobContainerClient(containerName);
                 if (await container.ExistsAsync(cancellationToken))

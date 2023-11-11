@@ -35,12 +35,28 @@ namespace TusWebApplication.TusAzure
                 {
                     foreach (var pair in settings)
                     {
-                        tusAzureStores.Add(pair.Key, new TusAzureStoreQueued(
-                            pair.Key,
-                            pair.Value?.AccountName ?? string.Empty,
-                            pair.Value?.AccountKey ?? string.Empty,
-                            pair.Value?.DefaultContainer ?? string.Empty
-                        ));
+                        if (pair.Value == null)
+                        {
+                            throw new NullReferenceException($"Settings not found for azure storage '{pair.Key}'.");
+                        }
+                        else if (pair.Value.CanUploadAsync)
+                        {
+                            tusAzureStores.Add(pair.Key, new TusAzureStoreQueued(
+                                pair.Key,
+                                pair.Value.AccountName ?? string.Empty,
+                                pair.Value.AccountKey ?? string.Empty,
+                                pair.Value.DefaultContainer ?? string.Empty
+                            ));
+                        }
+                        else
+                        {
+                            tusAzureStores.Add(pair.Key, new TusAzureStore(
+                                pair.Key,
+                                pair.Value.AccountName ?? string.Empty,
+                                pair.Value.AccountKey ?? string.Empty,
+                                pair.Value.DefaultContainer ?? string.Empty
+                            ));
+                        }
                     }
                 }
                 return tusAzureStores;

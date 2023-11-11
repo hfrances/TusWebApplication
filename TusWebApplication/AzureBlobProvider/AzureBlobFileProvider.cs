@@ -26,8 +26,7 @@ namespace TusWebApplication.AzureBlobProvider
             if (AzureSettings.TryGetValue(storageName, out AzureStorageCredentialSettings? settings))
             {
                 var blobService = AzureBlobHelper.CreateBlobServiceClient(
-                    settings.AccountName ?? string.Empty,
-                    settings.AccountKey ?? string.Empty
+                    settings.AccountName,settings.AccountKey
                 );
 
                 if (blobId.Length == 3)
