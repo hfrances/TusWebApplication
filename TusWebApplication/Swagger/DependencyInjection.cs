@@ -32,6 +32,7 @@ namespace TusWebApplication.Swagger
                     Description = string.Join("<br>", GetDescription(Assembly)),
                 });
                 c.DocumentFilter<CustomDocumentFilter>();
+                c.CustomSchemaIds(x => x.FullName?.Replace("+", "."));
                 c.IncludeXmlComments(assembly);
 
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme

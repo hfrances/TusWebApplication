@@ -10,7 +10,7 @@ namespace TusClientLibrary
     public sealed partial class TusClient
     {
 
-        public async Task<string> CreateFileAsync(
+        public async Task<TusUploaderAsync> CreateFileAsync(
             FileInfo file,
             string storeName, string containerName,
             string blobName = null, bool replace = false,
@@ -18,57 +18,34 @@ namespace TusClientLibrary
             bool useQueueAsync = false
         )
         {
+            var tusClient = new TusDotNetClient.TusClient();
+            UploadToken uploadToken;
+
             /* Authorize */
             await AuthorizeAsync();
+
+            /* Create upload-token */
+            uploadToken = await InnerHttpClient.FetchAsync<UploadToken>(HttpMethod.Post, $"files/{storeName}/{containerName}/request-upload", new
+            {
+                fileName = file.Name,
+                blob = blobName,
+                replace,
+                size = file.Length,
+                hash = (string)null // TODO: calculate MD5
+            });
+            tusClient.ApplyAuthorization(uploadToken.AccessToken);
 
             /* Create blob */
             string fileUrl;
             Uri uri;
-            var metadataParsed = new List<(string key, string value)>
-            {
-                // properties exclusively for upload process.
-                ("BLOB:container", containerName), // target container.
-                ("BLOB:name", blobName ?? string.Empty), // blob storage name.
-                ("BLOB:replace", replace.ToString()), // if exists, replace it (requires BLOB:name).
-                ("BLOB:useQueueAsync", useQueueAsync.ToString()), // if true, after upload from client to service, it does not wait for uplodad from service to blob storage.
-            };
-
-            if (tags != null)
-            {
-                // tags
-                foreach (var item in tags)
-                {
-                    metadataParsed.Add(($"TAG:{item.Key}", item.Value));
-                }
-            }
-            if (metadata != null)
-            {
-                // metadata
-                foreach (var item in metadata)
-                {
-                    metadataParsed.Add((item.Key, item.Value));
-                }
-            }
-
+            
             uri = new Uri(this.BaseAddress, $"files/{storeName}");
-            fileUrl = await InnerTusClient.CreateAsync(uri.OriginalString, file, metadataParsed.ToArray());
-            return fileUrl;
-        }
-
-        public async Task UploadAsync(
-            string fileUrl, FileInfo file, double chunkSize = 5D,
-            ProgressedDelegate progressed = null)
-        {
-            var uploadOperation = InnerTusClient.UploadAsync(fileUrl, file, chunkSize);
-
-            if (progressed != null)
-            {
-                uploadOperation.Progressed += (transferred, total) =>
-                {
-                    progressed(transferred, total);
-                };
-            }
-            await uploadOperation;
+            fileUrl = await tusClient.CreateAsync(
+                uri.OriginalString,
+                file,
+                TusHelper.CreateMedatada(containerName, blobName, replace, tags, metadata, useQueueAsync)
+            );
+            return new TusUploaderAsync(this.BaseAddress, tusClient, uploadToken, file, fileUrl);
         }
 
         public async Task<string> GenerateSasUrlAsync(string fileUrl, TimeSpan expiresOn)
@@ -101,6 +78,7 @@ namespace TusClientLibrary
             return result.ToString();
         }
 
+
         private async Task AuthorizeAsync()
         {
 
@@ -108,14 +86,9 @@ namespace TusClientLibrary
             {
                 if (this.AuthorizationToken == null || AuthorizationToken.Expired < DateTimeOffset.Now)
                 {
-                    if (InnerTusClient.AdditionalHeaders.ContainsKey("Authorization"))
-                    {
-                        InnerTusClient.AdditionalHeaders.Remove("Authorization");
-                    }
                     InnerHttpClient.DefaultRequestHeaders.Authorization = null;
 
                     this.AuthorizationToken = await GetTokenAsync(InnerHttpClient, Credentials.UserName, Credentials.Login, Credentials.Password);
-                    InnerTusClient.AdditionalHeaders.Add("Authorization", $"Bearer {AuthorizationToken.AccessToken}");
                     InnerHttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthorizationToken.AccessToken);
                 }
             }

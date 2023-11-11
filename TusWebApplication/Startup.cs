@@ -14,6 +14,7 @@ using System.Text.Json.Serialization;
 using TusWebApplication.Application;
 using TusWebApplication.Swagger;
 using TusWebApplication.TusAzure;
+using TusWebApplication.TusAzure.Authentication;
 
 namespace TusWebApplication
 {
@@ -30,7 +31,8 @@ namespace TusWebApplication
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            var jwtTokenConfiguration = this.Configuration.GetSection("Security").GetSection("Tokens").Get<Settings.JwtTokenConfiguration>();
+            var jwtTokenConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("_Default").Get<Settings.JwtTokenConfiguration>();
+            var jwtTokenUploadConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("Upload").Get<TusAzure.Authentication.JwtTokenConfiguration>();
             var ipSafeListSettings = Configuration.GetSection("Security").GetSection("IpSafeList").Get<IpSafeListSettings>();
 
             services.AddCors(opts => opts.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
@@ -40,6 +42,7 @@ namespace TusWebApplication
             );
 
             services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                    // JWT Token for secured requests.
                     .AddJwtBearer(options =>
                     {
                         options.RequireHttpsMetadata = false;
@@ -57,7 +60,11 @@ namespace TusWebApplication
                     moreOptions =>
                     {
                         moreOptions.TokenLifeTimespan = TimeSpan.FromSeconds(jwtTokenConfiguration.AccessExpireSeconds);
-                    });
+                    })
+                    // JWT Token for uploading files.
+                    .AddTusJwtBearer(jwtTokenUploadConfiguration)
+                ;
+
             services.Configure<Settings.CredentialsConfiguration>(this.Configuration.GetSection("Security").GetSection("Credentials").Bind);
             services.AddIpSafeFilter(ipSafeListSettings);
 
@@ -95,16 +102,18 @@ namespace TusWebApplication
 
             app.UseSerializedExceptionHandler();
 
-            app.UseTusAzure(basePath);
-
+            app.UseTusAzure();
+            
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                //endpoints.MapTusAzure(basePath);
                 endpoints.MapGet("/", async context =>
                 {
                     await context.Response.WriteAsync("Hello World!");
                 });
             });
         }
+
     }
 }

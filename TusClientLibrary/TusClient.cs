@@ -11,7 +11,6 @@ namespace TusClientLibrary
     {
         public delegate void ProgressedDelegate(long transferred, long total);
 
-        TusDotNetClient.TusClient InnerTusClient { get; }
         HttpClient InnerHttpClient { get; }
         TusClientCredentials Credentials { get; }
         Token AuthorizationToken { get; set; }
@@ -21,7 +20,6 @@ namespace TusClientLibrary
         public TusClient(Uri baseAddress)
         {
             this.BaseAddress = baseAddress;
-            this.InnerTusClient = new TusDotNetClient.TusClient();
             this.InnerHttpClient = new HttpClient() { BaseAddress = baseAddress };
         }
 
@@ -31,8 +29,8 @@ namespace TusClientLibrary
             this.Credentials = credentials;
         }
 
-
-        public string CreateFile(
+        
+        public TusUploader CreateFile(
             FileInfo file,
             string storeName, string containerName,
             string blobName = null, bool replace = false,
@@ -40,57 +38,34 @@ namespace TusClientLibrary
             bool useQueueAsync = false
         )
         {
+            var tusClient = new TusDotNetClient.TusClient();
+            UploadToken uploadToken;
+
             /* Authorize */
             Authorize();
+
+            /* Create upload-token */
+            uploadToken = InnerHttpClient.Fetch<UploadToken>(HttpMethod.Post, $"files/{storeName}/{containerName}/request-upload", new
+            {
+                fileName = file.Name,
+                blob = blobName,
+                replace,
+                size = file.Length,
+                hash = (string)null // TODO: calculate MD5
+            });
+            tusClient.ApplyAuthorization(uploadToken.AccessToken);
 
             /* Create blob */
             string fileUrl;
             Uri uri;
-            var metadataParsed = new List<(string key, string value)>
-            {
-                // properties exclusively for upload process.
-                ("BLOB:container", containerName), // target container.
-                ("BLOB:name", blobName ?? string.Empty), // blob storage name.
-                ("BLOB:replace", replace.ToString()), // if exists, replace it (requires BLOB:name).
-                ("BLOB:useQueueAsync", useQueueAsync.ToString()), // if true, after upload from client to service, it does not wait for uplodad from service to blob storage.
-            };
-
-            if (tags != null)
-            {
-                // tags
-                foreach (var item in tags)
-                {
-                    metadataParsed.Add(($"TAG:{item.Key}", item.Value));
-                }
-            }
-            if (metadata != null)
-            {
-                // metadata
-                foreach (var item in metadata)
-                {
-                    metadataParsed.Add((item.Key, item.Value));
-                }
-            }
-
+            
             uri = new Uri(this.BaseAddress, $"files/{storeName}");
-            fileUrl = InnerTusClient.CreateAsync(uri.OriginalString, file, metadataParsed.ToArray()).Result;
-            return fileUrl;
-        }
-
-        public void Upload(
-            string fileUrl, FileInfo file, double chunkSize = 5D,
-            ProgressedDelegate progressed = null)
-        {
-            var uploadOperation = InnerTusClient.UploadAsync(fileUrl, file, chunkSize);
-
-            if (progressed != null)
-            {
-                uploadOperation.Progressed += (transferred, total) =>
-                {
-                    progressed(transferred, total);
-                };
-            }
-            uploadOperation.Operation.Wait();
+            fileUrl = tusClient.CreateAsync(
+                uri.OriginalString, 
+                file, 
+                TusHelper.CreateMedatada(containerName, blobName, replace, tags, metadata, useQueueAsync)
+            ).Result;
+            return new TusUploader(this.BaseAddress, tusClient, uploadToken, file, fileUrl);
         }
 
         public string GenerateSasUrl(string fileUrl, TimeSpan expiresOn)
@@ -123,6 +98,7 @@ namespace TusClientLibrary
             return result.Uri.ToString();
         }
 
+
         private void Authorize()
         {
 
@@ -130,14 +106,9 @@ namespace TusClientLibrary
             {
                 if (this.AuthorizationToken == null || AuthorizationToken.Expired < DateTimeOffset.Now)
                 {
-                    if (InnerTusClient.AdditionalHeaders.ContainsKey("Authorization"))
-                    {
-                        InnerTusClient.AdditionalHeaders.Remove("Authorization");
-                    }
                     InnerHttpClient.DefaultRequestHeaders.Authorization = null;
 
                     this.AuthorizationToken = GetToken(InnerHttpClient, Credentials.UserName, Credentials.Login, Credentials.Password);
-                    InnerTusClient.AdditionalHeaders.Add("Authorization", $"Bearer {AuthorizationToken.AccessToken}");
                     InnerHttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthorizationToken.AccessToken);
                 }
             }

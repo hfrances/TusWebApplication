@@ -9,7 +9,7 @@ using TusWebApplication.Application.Auth.Queries;
 namespace TusWebApplication.Controllers
 {
 
-    [Route("api/auth")]
+    [Route("auth")]
     [ApiController, Authorize, IpSafeFilter]
     public class AuthController : Base.ApiControllerBase
     {

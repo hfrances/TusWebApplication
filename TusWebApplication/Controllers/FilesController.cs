@@ -10,8 +10,8 @@ using TusWebApplication.Application.Files.Queries;
 namespace TusWebApplication.Controllers
 {
 
-    [Route("api/files")]
-    [ApiController, Authorize, IpSafeFilter]
+    [Route("files")]
+    [ApiController]
     public class FilesController : Base.ApiControllerBase
     {
 
@@ -41,7 +41,7 @@ namespace TusWebApplication.Controllers
         /// <param name="store">Store name</param>
         /// <param name="container">Container name</param>
         /// <param name="blob">Blob name</param>
-        [HttpGet("{store}/{container}/{blob}/details")]
+        [HttpGet("{store}/{container}/{blob}/details"), Authorize, IpSafeFilter]
         public Task<FileDto> GetFilebyIdAsync(string store, string container, string blob, [FromQuery] GetFileByIdQuery.RequestParameters parameters)
             => Send(new GetFileByIdQuery
             {
@@ -57,7 +57,7 @@ namespace TusWebApplication.Controllers
         /// <param name="store">Store name</param>
         /// <param name="container">Container name</param>
         /// <param name="blob">Blob name</param>
-        [HttpPost("{store}/{container}/{blob}/generateSas")]
+        [HttpPost("{store}/{container}/{blob}/generateSas"), Authorize, IpSafeFilter]
         public Task<string> GenerateSas(string store, string container, string blob, [FromQuery] GenerateSasTokenFromFileIdCommand.RequestParameters parameters, [FromBody] GenerateSasTokenFromFileIdCommand.RequestBody body)
             => Send(new GenerateSasTokenFromFileIdCommand
             {
@@ -74,13 +74,27 @@ namespace TusWebApplication.Controllers
         /// <param name="store">Store name</param>
         /// <param name="container">Container name</param>
         /// <param name="blob">Blob name</param>
-        [HttpPut("{store}/{container}/{blob}/rename")]
+        [HttpPut("{store}/{container}/{blob}/rename"), Authorize, IpSafeFilter]
         public Task RenameFileAsync(string store, string container, string blob, [FromBody] RenameFileCommand.CommandBody body)
             => Send(new RenameFileCommand
             {
                 StoreName = store,
                 ContainerName = container,
                 BlobName = blob,
+                Body = body
+            });
+
+        /// <summary>
+        /// Creates a temporal token for uploading an specific file.
+        /// </summary>
+        /// <param name="store">Store name</param>
+        /// <param name="container">Container name</param>
+        [HttpPost("{store}/{container}/request-upload"), Authorize, IpSafeFilter]
+        public Task<RequestUploadDto> RequestUpload(string store, string container, [FromBody] RequestUploadCommand.CommandBody body)
+            => Send(new RequestUploadCommand
+            {
+                StoreName = store,
+                Container = container,
                 Body = body
             });
 

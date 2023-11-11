@@ -2,7 +2,7 @@
   "profiles": {
     "TusConsoleApp": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\aspnetcore-runtime-3.1.32-win-x64.exe\" /store:\"hfcloud_eu\" /container:other /useQueueAsync:true /blob2:afbc8e96-d41e-409f-b9f5-9c03b49acc93 /replace2"
+      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\SQL2022-SSEI-Expr.exe\" /store:\"hfcloud_eu\" /container:other /useQueueAsync:false /blob2:afbc8e96-d41e-409f-b9f5-9c03b49acc93 /replace2"
     }
   }
 }

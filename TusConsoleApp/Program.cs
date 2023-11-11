@@ -46,7 +46,8 @@ namespace TusConsoleApp
                                 Login = settings.Login,
                                 Password = settings.Password
                             });
-                        var fileUrl = client.CreateFile(
+
+                        var uploader = client.CreateFile(
                             file, storeName, containerName,
                             blobName, replace,
                             new Dictionary<string, string>
@@ -59,10 +60,10 @@ namespace TusConsoleApp
                             },
                             useQueueAsync
                         );
-                        Console.WriteLine($"File:\t\t{fileUrl}");
+                        Console.WriteLine($"File:\t\t{uploader}");
 
                         (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
-                        client.Upload(fileUrl, file, 5D, (transferred, total) =>
+                        uploader.Upload(5D, (transferred, total) =>
                         {
                             Console.SetCursorPosition(position.Left, position.Top);
                             Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
@@ -83,7 +84,7 @@ namespace TusConsoleApp
 
                         /* Generate SAS */
                         string sasUrl;
-                        sasUrl = client.GenerateSasUrl(fileUrl, TimeSpan.FromMinutes(10));
+                        sasUrl = client.GenerateSasUrl(uploader.FileUrl, TimeSpan.FromMinutes(10));
                         Console.WriteLine($"Url SAS:\t{sasUrl}");
                     }
                     else
@@ -101,7 +102,7 @@ namespace TusConsoleApp
                 Console.WriteLine("Address not specificed.");
             }
             Console.WriteLine();
-            //Console.ReadKey();
+            Console.ReadKey();
         }
 
     }
