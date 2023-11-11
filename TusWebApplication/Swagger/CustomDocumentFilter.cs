@@ -13,7 +13,7 @@ namespace TusWebApplication.Swagger
 
         public void Apply(OpenApiDocument swaggerDoc, DocumentFilterContext context)
         {
-            AddPath(swaggerDoc, "Files", "/api/files/{store}", OperationType.Post, "Uploads a file using TUS technology.", new[] { ("200", "Success") });
+            AddPath(swaggerDoc, "Files", "/files/{store}", OperationType.Post, "Uploads a file using TUS technology.", new[] { ("200", "Success") });
         }
 
         private static void AddPath(OpenApiDocument swaggerDoc, string tag, string key, OperationType operationType, string? summary = null, IEnumerable<(string Key, string Description)>? responses = null)
