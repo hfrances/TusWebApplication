@@ -83,6 +83,10 @@ namespace TusConsoleApp
                         }
                         Console.WriteLine($"Hash:\t\t{contentHash}");
 
+                        /* Get details */
+                        FileDetails details;
+                        details = client.GetFileDetails(uploader.FileUrl);
+
                         /* Generate SAS */
                         string sasUrl;
                         sasUrl = client.GenerateSasUrl(uploader.FileUrl, TimeSpan.FromMinutes(10));

@@ -68,6 +68,22 @@ namespace TusClientLibrary
             return new TusUploader(this.BaseAddress, tusClient, uploadToken, file, fileUrl);
         }
 
+        public FileDetails GetFileDetails(string fileUrl)
+        {
+            FileDetails result;
+            var fileUri = new Uri(fileUrl);
+            UriBuilder requestUri;
+
+            Authorize();
+            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/details")
+            {
+                Query = fileUri.Query
+            };
+
+            result = InnerHttpClient.Fetch<FileDetails>(HttpMethod.Get, requestUri.Uri.ToString());
+            return result;
+        }
+
         public string GenerateSasUrl(string fileUrl, TimeSpan expiresOn)
         {
             var fileUri = new Uri(fileUrl);
