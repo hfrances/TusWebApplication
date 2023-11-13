@@ -21,41 +21,17 @@ namespace TusWebApplication.Swagger
 
         public static IServiceCollection AddSwagger(this IServiceCollection services)
         {
-            var assembly = Assembly.GetExecutingAssembly();
-
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc(SWAGGER_V1_ID, new OpenApiInfo
                 {
                     Version = SWAGGER_V1_ID,
-                    Title = $"{Assembly.GetName().Name}",
-                    Description = string.Join("<br>", GetDescription(Assembly)),
+                    Title = $"{Assembly.GetName().Name}"
                 });
+                c.DocumentFilter<DescriptionDocumentFilter>(Assembly);
                 c.DocumentFilter<CustomDocumentFilter>();
                 c.CustomSchemaIds(x => x.FullName?.Replace("+", "."));
-                c.IncludeXmlComments(assembly);
-
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    BearerFormat = "JWT",
-                    Scheme = "Bearer",
-                    Description = "Type here tu JWT con Bearer",
-                    In = ParameterLocation.Header,
-                    Type = SecuritySchemeType.ApiKey
-                });
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement {
-                {
-                    new OpenApiSecurityScheme
-                    {
-                        Reference = new OpenApiReference
-                        {
-                            Type = ReferenceType.SecurityScheme,
-                            Id = "Bearer"
-                        }
-                    },
-                    Array.Empty<string>()
-                }});
+                c.IncludeXmlComments(Assembly);
             });
             return services;
         }
@@ -67,7 +43,7 @@ namespace TusWebApplication.Swagger
             {
                 c.RoutePrefix = "swagger";
                 c.DocumentTitle = $"{Assembly.GetName().Name} - {c.DocumentTitle}";
-                c.SwaggerEndpoint($"/swagger/{SWAGGER_V1_ID}/swagger.json", SWAGGER_V1_NAME);
+                c.SwaggerEndpoint($"{SWAGGER_V1_ID}/swagger.json", SWAGGER_V1_NAME);
                 c.DocExpansion(DocExpansion.List); // Endpoints listed.
                 c.DefaultModelsExpandDepth(0); // Schema collapsed.
             });
@@ -85,27 +61,6 @@ namespace TusWebApplication.Swagger
             {
                 options.IncludeXmlComments(xmlFile);
             }
-        }
-
-        /// <summary>
-        /// Gets project information.
-        /// </summary>
-        private static IEnumerable<string> GetDescription(Assembly assembly)
-        {
-            var result = new List<string>();
-            var productId = assembly.GetCustomAttribute<GuidAttribute>()?.Value;
-            var description = assembly.GetCustomAttribute<AssemblyDescriptionAttribute>()?.Description;
-
-            result.Add($"<b>Summary</b>");
-            if (productId != null)
-            {
-                result.Add($"Product id: {Guid.Parse(productId)}");
-            }
-            result.Add($"Product description: {(string.IsNullOrWhiteSpace(description) ? "<null>" : description)}");
-            result.Add($"Assembly version: {assembly.GetName().Version}");
-            result.Add($"OS Platform: {RuntimeInformation.OSDescription}");
-            result.Add($"Target framework: {assembly.GetCustomAttribute<TargetFrameworkAttribute>()?.FrameworkName}");
-            return result;
         }
 
     }
