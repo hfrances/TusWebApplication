@@ -60,7 +60,8 @@ namespace TusConsoleApp
                             },
                             useQueueAsync
                         );
-                        Console.WriteLine($"File:\t\t{uploader.FileUrl}");
+                        Console.WriteLine($"File path:\t{uploader.FileUrl}");
+                        Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
 
                         (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
                         uploader.Upload(5D, (transferred, total) =>

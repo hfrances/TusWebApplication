@@ -50,7 +50,7 @@ namespace TusWebApplication.Application.Files.Helpers
                             throw new Exceptions.InvalidSasTokenException("Invalid signature version.");
                     }
 
-                    if (expiresOn < DateTime.UtcNow)
+                    if (expiresOn < DateTimeOffset.UtcNow)
                     {
                         throw new Exceptions.InvalidSasTokenException("Access expired.");
                     }

@@ -19,6 +19,7 @@ namespace TusClientLibrary
         public Uri BaseAddress { get; }
         public FileInfo FileInfo { get; }
         public string FileUrl { get; }
+        public string RelativeUrl => new Uri(FileUrl).AbsolutePath;
 
         internal TusUploaderAsync(Uri baseAddress, TusDotNetClient.TusClient tusClient, UploadToken uploadToken, FileInfo fileInfo, string fileUrl)
         {

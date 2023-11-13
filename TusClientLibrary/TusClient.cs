@@ -85,7 +85,7 @@ namespace TusClientLibrary
             queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
             queryParametersSas = HttpUtility.ParseQueryString(InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.ToString(), new
             {
-                expiresOn = DateTimeOffset.Now.Add(expiresOn)
+                expiresOn = DateTimeOffset.UtcNow.Add(expiresOn)
             }));
             foreach (var parameter in queryParametersSas)
             {

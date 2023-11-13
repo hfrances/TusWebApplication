@@ -1,8 +1,10 @@
 ﻿using Azure.Storage.Blobs;
 using MediatR;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Writers;
+using System;
 using System.ComponentModel;
 using System.Reflection.Metadata;
 using System.Threading;
@@ -20,15 +22,17 @@ namespace TusWebApplication.Application.Files.Handlers
         AzureBlobProvider.AzureStorageCredentialsSettings AzureSettings { get; }
         AzureBlobProvider.AzureBlobFileProvider AzureBlobFileProvider { get; }
         TusAzure.IBlobManager TusAzureBlobManager { get; }
+        ILogger Logger { get; }
 
         public DownloadFileQueryHandler(
             IOptions<AzureBlobProvider.AzureStorageCredentialsSettings> azureOptions,
             AzureBlobProvider.AzureBlobFileProvider azureBlobFileProvider,
-            TusAzure.IBlobManager tusAzureBlobManager)
+            TusAzure.IBlobManager tusAzureBlobManager, ILogger<DownloadFileQueryHandler> logger)
         {
             this.AzureSettings = azureOptions.Value;
             this.AzureBlobFileProvider = azureBlobFileProvider;
             this.TusAzureBlobManager = tusAzureBlobManager;
+            this.Logger = logger;
         }
 
         public Task<IFileInfo> Handle(DownloadFileQuery request, CancellationToken cancellationToken)
@@ -43,6 +47,7 @@ namespace TusWebApplication.Application.Files.Handlers
                             var useSas = (blob.CanGenerateSasUri && containerAccessPolicy == Azure.Storage.Blobs.Models.PublicAccessType.None);
                             string subPath;
 
+                            Logger.LogInformation($"Requested SAS token for {request.StoreName}/{request.ContainerName}/{request.BlobName}. Request: {request.Parameters?.Se}; Current: {DateTimeOffset.UtcNow}; Difference: {request.Parameters?.Se - DateTimeOffset.UtcNow}");
                             SasHelper.ValidateSasHash(request.Parameters?.Sv, request.Parameters?.Se, request.Parameters?.Sig, blob, properties, useSas);
                             subPath = $"{request.StoreName}/{request.ContainerName}/{request.BlobName}";
                             if (!string.IsNullOrWhiteSpace(request.Parameters?.VersionId))
