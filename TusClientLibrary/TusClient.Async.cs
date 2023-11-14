@@ -72,7 +72,7 @@ namespace TusClientLibrary
                 fileUrl = await tusClient.CreateAsync(
                     uri.OriginalString,
                     fileSize,
-                    TusHelper.CreateMedatada(fileName, tags, metadata)
+                    TusHelper.CreateMedatada(tags, metadata)
                 );
                 return new TusUploaderAsync(this.BaseAddress, tusClient, uploadToken, fileUrl);
             }

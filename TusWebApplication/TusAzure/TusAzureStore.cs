@@ -156,7 +156,7 @@ namespace TusWebApplication.TusAzure
             }
             else
             {
-                var properties = Authentication.TusAuthenticationHelper.ParseClaims(user.Claims);
+                Authentication.UploadProperties properties = Authentication.TusAuthenticationHelper.ParseClaims(user.Claims);
 
                 // Get upload properties.
                 var container = TusAzureHelper.GetContainer(this.BlobService, properties.Container ?? this.DefaultContainer);

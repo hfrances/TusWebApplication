@@ -104,6 +104,8 @@ namespace TusWebApplication.TusAzure
                     commitOptions.Metadata.Add(key, stringValue);
                 }
             }
+
+            commitOptions.Metadata["filename"] = blobInfo.FileName;
             return commitOptions;
         }
 

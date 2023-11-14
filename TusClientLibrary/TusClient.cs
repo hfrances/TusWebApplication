@@ -94,7 +94,7 @@ namespace TusClientLibrary
                 fileUrl = tusClient.CreateAsync(
                     uri.OriginalString,
                     fileSize,
-                    TusHelper.CreateMedatada(fileName, tags, metadata)
+                    TusHelper.CreateMedatada(tags, metadata)
                 ).Result;
                 return new TusUploader(this.BaseAddress, tusClient, uploadToken, fileUrl);
             }

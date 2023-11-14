@@ -18,14 +18,9 @@ namespace TusClientLibrary
             tusClient.AdditionalHeaders.Add("Authorization", $"Bearer {accessToken}");
         }
 
-        public static (string key, string value)[] CreateMedatada(string fileName,
-            IDictionary<string, string> tags, IDictionary<string, string> metadata)
+        public static (string key, string value)[] CreateMedatada(IDictionary<string, string> tags, IDictionary<string, string> metadata)
         {
-            var metadataParsed = new List<(string key, string value)>
-            {
-                // properties exclusively for upload process.
-                ("filename", fileName)
-            };
+            var metadataParsed = new List<(string key, string value)>();
 
             if (tags != null)
             {

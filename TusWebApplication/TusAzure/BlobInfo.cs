@@ -23,7 +23,7 @@ namespace TusWebApplication.TusAzure
         /// <summary>
         /// File name of the blob.
         /// </summary>
-        public string? FileName { get; set; }
+        public string FileName { get; set; }
         /// <summary>
         /// Metadata to upload into the blob.
         /// </summary>
@@ -90,7 +90,7 @@ namespace TusWebApplication.TusAzure
         public Exception? Error { get; set; }
 
 
-        public BlobInfo(string fileId, string containerName, string blobName, string? fileName, string metadata, long uploadLength, bool useQueueAsync, BlockBlobClient blob)
+        public BlobInfo(string fileId, string containerName, string blobName, string fileName, string metadata, long uploadLength, bool useQueueAsync, BlockBlobClient blob)
         {
             FileId = fileId;
             ContainerName = containerName;
