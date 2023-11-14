@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1;net461</TargetFrameworks>
-    <Version>3.0.0-alpha</Version>
+    <Version>3.0.0-alpha.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

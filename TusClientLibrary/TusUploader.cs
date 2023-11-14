@@ -12,13 +12,13 @@ namespace TusClientLibrary
     public sealed class TusUploader
     {
 
-        UploadToken UploadToken { get; }
         TusDotNetClient.TusClient InnerTusClient { get; }
         HttpClient InnerHttpClient { get; }
         
         public Uri BaseAddress { get; }
         public string FileUrl { get; }
         public string RelativeUrl => new Uri(FileUrl).AbsolutePath;
+        public UploadToken UploadToken { get; }
 
         internal TusUploader(Uri baseAddress, TusDotNetClient.TusClient tusClient, UploadToken uploadToken, string fileUrl)
         {
