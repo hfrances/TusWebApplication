@@ -49,7 +49,8 @@ namespace TusConsoleApp
                             });
 
                         var uploader = client.CreateFile(
-                            file, storeName, containerName,
+                            storeName, containerName,
+                            $"{System.IO.Path.GetFileNameWithoutExtension(file.Name)}+{DateTimeOffset.Now.ToString("s")}{file.Extension}", file.Length,
                             blobName, replace,
                             new Dictionary<string, string>
                             {
@@ -92,14 +93,20 @@ namespace TusConsoleApp
                         string sasUrl;
                         sasUrl = client.GenerateSasUrl(uploader.FileUrl, TimeSpan.FromMinutes(10));
                         Console.WriteLine();
+                        Console.WriteLine($"Created on:\t{details.CreatedOn}");
                         Console.WriteLine($"Url SAS:\t{sasUrl}");
 
                         /* Generate SAS of previous version (if exists) */
                         var previousVersion = details.Versions.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);
 
-                        if (previousVersion != null)
+                        if (previousVersion == null)
                         {
-                            string urlWithVer = $"{uploader.FileUrl}?versionId={Uri.EscapeDataString(details.VersionId)}";
+                            Console.WriteLine();
+                            Console.WriteLine("Previous version: not found.");
+                        }
+                        else
+                        {
+                            string urlWithVer = $"{uploader.FileUrl}?versionId={Uri.EscapeDataString(previousVersion.VersionId)}";
                             FileDetails detailsWithVer;
                             string sasUrlWithVer;
 
@@ -112,7 +119,6 @@ namespace TusConsoleApp
                         }
 
                         Console.WriteLine();
-
                     }
                     else
                     {
