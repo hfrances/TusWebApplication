@@ -1,4 +1,6 @@
 ﻿using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System;
 using System.IO;
 using System.Linq;
@@ -11,12 +13,12 @@ namespace TusWebApplication.TusAzure
     sealed class TusAzureStoreQueued : TusAzureStore, ITusStore, ITusCreationStore, ITusTerminationStore, ITusReadableStore
     {
 
-        public TusAzureStoreQueued(string storeName, string accountName, string accountKey, string defaultContainer)
-            : base(storeName, accountName, accountKey, defaultContainer)
+        public TusAzureStoreQueued(string storeName, string accountName, string accountKey, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
+            : base(storeName, accountName, accountKey, defaultContainer, httpContextAccessor, logger)
         { }
 
-        public TusAzureStoreQueued(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer)
-            : base(storeName, blobService, defaultContainer)
+        public TusAzureStoreQueued(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
+            : base(storeName, blobService, defaultContainer, httpContextAccessor, logger)
         { }
 
         public override async Task<long> AppendDataAsync(string fileId, Stream stream, CancellationToken cancellationToken)
@@ -90,7 +92,7 @@ namespace TusWebApplication.TusAzure
                         // Begin
                         block.Status = QueueItemStatus.Started;
                         blobInfo.QueuePosition += 1;
-                        Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
+                        Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
 
                         // Calculate MD5 block.
                         var buffer = new byte[block.Length];
@@ -107,7 +109,7 @@ namespace TusWebApplication.TusAzure
                         block.Status = QueueItemStatus.Done;
                         block.Dispose();
                         blobInfo.Queue.Remove(block);
-                        Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
+                        Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {block.Name}. Done.");
                         GC.Collect();
                     }
                 }
@@ -117,7 +119,7 @@ namespace TusWebApplication.TusAzure
                 blobInfo.Done = true;
                 blobInfo.Error = ex;
                 blobInfo.Dispose();
-                Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {blockId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime}");
+                Logger.LogInformation(ex, $"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. BlockId: {blockId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime}");
                 throw;
             }
             if (blobInfo.SizeOffset == blobInfo.UploadLength)
@@ -130,23 +132,31 @@ namespace TusWebApplication.TusAzure
                     // Commit.
                     var commitOptions = TusAzureHelper.CreateCommitBlockListOptions(blobInfo);
                     var contentHash = commitOptions.HttpHeaders.ContentHash;
+                    var hash = Convert.ToBase64String(contentHash ?? Array.Empty<byte>());
 
-                    Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. Hash: {Convert.ToBase64String(contentHash ?? Array.Empty<byte>())}. Commiting...");
-                    await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
-                    Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime}");
+                    Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. Hash: {hash}. Commiting...");
+                    if (!string.IsNullOrEmpty(blobInfo.ValidateHash) && blobInfo.ValidateHash != hash)
+                    {
+                        throw new ArgumentException($"Hash in the request token is different from the uploaded file.");
+                    }
+                    else
+                    {
+                        await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
+                        Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime}");
 
-                    // Validate.
-                    var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
-                    var blob = container.GetBlobClient(blobInfo.BlobName);
-                    blob.GetHashCode();
-                    var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
-                    uri.ToString();
-                    Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                        // Validate.
+                        var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
+                        var blob = container.GetBlobClient(blobInfo.BlobName);
+                        blob.GetHashCode();
+                        var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
+                        uri.ToString();
+                        Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                    }
                 }
                 catch (Exception ex)
                 {
                     blobInfo.Error = ex;
-                    Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime}");
+                    Logger.LogError(ex, $"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime}");
                     throw;
                 }
                 finally

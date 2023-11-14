@@ -10,13 +10,47 @@ namespace TusClientLibrary
     public sealed partial class TusClient
     {
 
-        public async Task<TusUploaderAsync> CreateFileAsync(
+        /// <summary>
+        /// Creates a blob file and returns a <see cref="TusUploaderAsync"/> object to upload its content.
+        /// </summary>
+        /// <param name="file"><see cref="FileInfo"/> object with the file to upload.</param>
+        /// <param name="storeName">The name of the store where place the file.</param>
+        /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
+        /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
+        /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
+        /// <param name="tags">Optional. A list of tags added to the blob. Tags can be used for filtering in the blob.</param>
+        /// <param name="metadata">Optional. A list of metadatas added to the blob.</param>
+        /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetailsAsync(string)"./></param>
+        /// <returns>An <see cref="TusUploaderAsync"/> object to upload the content.</returns>
+        public Task<TusUploaderAsync> CreateFileAsync(
             FileInfo file,
             string storeName, string containerName,
             string blobName = null, bool replace = false,
             IDictionary<string, string> tags = null, IDictionary<string, string> metadata = null,
-            bool useQueueAsync = false
-        )
+            bool useQueueAsync = false)
+        {
+            return CreateFileAsync(storeName, containerName, file.Name, file.Length, blobName, replace, tags, metadata, useQueueAsync);
+        }
+
+        /// <summary>
+        /// Creates a blob file and returns a <see cref="TusUploaderAsync"/> object to upload its content.
+        /// </summary>
+        /// <param name="storeName">The name of the store where place the file.</param>
+        /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
+        /// <param name="fileName">The name of the file stored in <paramref name="storeName"/>. This is the name that the file has when it is downloaded. Please do not confuse with the <paramref name="blobName"/>.</param>
+        /// <param name="fileSize">Lenght of the <paramref name="fileName"/>.</param>
+        /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
+        /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
+        /// <param name="tags">Optional. A list of tags added to the blob. Tags can be used for filtering in the blob.</param>
+        /// <param name="metadata">Optional. A list of metadatas added to the blob.</param>
+        /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetailsAsync(string)"./></param>
+        /// <returns>An <see cref="TusUploaderAsync"/> object to upload the content.</returns>
+        public async Task<TusUploaderAsync> CreateFileAsync(
+            string storeName, string containerName,
+            string fileName, long fileSize,
+            string blobName = null, bool replace = false,
+            IDictionary<string, string> tags = null, IDictionary<string, string> metadata = null,
+            bool useQueueAsync = false, string hash = null)
         {
             var tusClient = new TusDotNetClient.TusClient();
             UploadToken uploadToken;
@@ -25,27 +59,114 @@ namespace TusClientLibrary
             await AuthorizeAsync();
 
             /* Create upload-token */
-            uploadToken = await InnerHttpClient.FetchAsync<UploadToken>(HttpMethod.Post, $"files/{storeName}/{containerName}/request-upload", new
-            {
-                fileName = file.Name,
-                blob = blobName,
-                replace,
-                size = file.Length,
-                hash = (string)null // TODO: calculate MD5
-            });
+            uploadToken = await RequestUploadAsync(storeName, containerName, fileName, fileSize, blobName, replace, useQueueAsync, hash);
             tusClient.ApplyAuthorization(uploadToken.AccessToken);
 
             /* Create blob */
             string fileUrl;
             Uri uri;
-            
-            uri = new Uri(this.BaseAddress, $"files/{storeName}");
-            fileUrl = await tusClient.CreateAsync(
-                uri.OriginalString,
-                file,
-                TusHelper.CreateMedatada(containerName, blobName, replace, tags, metadata, useQueueAsync)
-            );
-            return new TusUploaderAsync(this.BaseAddress, tusClient, uploadToken, file, fileUrl);
+
+            try
+            {
+                uri = new Uri(this.BaseAddress, $"files/{storeName}");
+                fileUrl = await tusClient.CreateAsync(
+                    uri.OriginalString,
+                    fileSize,
+                    TusHelper.CreateMedatada(fileName, tags, metadata)
+                );
+                return new TusUploaderAsync(this.BaseAddress, tusClient, uploadToken, fileUrl);
+            }
+            catch (AggregateException ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
+            {
+                var response = qckdev.Text.Json.JsonConvert.DeserializeObject<TusResponse>(tusex.ResponseContent);
+
+                throw new Exception(response.Error?.Message ?? tusex.Message, tusex);
+            }
+        }
+
+        /// <summary>
+        /// Generates a temporal token with metadata for requesting permissions to other application to upload a file.
+        /// </summary>
+        /// <param name="storeName">The name of the store where place the file.</param>
+        /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
+        /// <param name="fileName">The name of the file stored in <paramref name="storeName"/>. This is the name that the file has when it is downloaded. Please do not confuse with the <paramref name="blobName"/>.</param>
+        /// <param name="fileSize">Lenght of the <paramref name="fileName"/>.</param>
+        /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
+        /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
+        /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetails(string)"./></param>
+        /// <returns>A <see cref="UploadToken"/> with the token necessary to upload a new file.</returns>
+        public async Task<UploadToken> RequestUploadAsync(
+            string storeName, string containerName,
+            string fileName, long fileSize,
+            string blobName = null, bool replace = false,
+            bool useQueueAsync = false, string hash = null)
+        {
+            UploadToken uploadToken;
+
+            uploadToken = await InnerHttpClient.FetchAsync<UploadToken>(HttpMethod.Post, $"files/{storeName}/{containerName}/request-upload", new
+            {
+                fileName,
+                blob = blobName,
+                replace,
+                size = fileSize,
+                hash,
+                useQueueAsync
+            });
+            return uploadToken;
+        }
+
+        /// <summary>
+        /// Returns information about an specific blob.
+        /// </summary>
+        /// <param name="fileUrl">The file url. Url can contains the file version (https://..../container/blobname?versionId=xxxxxxx).</param>
+        /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
+        /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
+        public Task<FileDetails> GetFileDetailsAsync(string fileUrl, bool includeVersions = false)
+        {
+            var fileUri = new Uri(fileUrl);
+            UriBuilder requestUri;
+            IDictionary<string, string> queryParameters;
+            string versionId;
+
+            // Extract versionId from the url and pass to the overloaded method.
+            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            if (queryParameters.TryGetValue("versionId", out versionId))
+            {
+                queryParameters.Remove("versionId");
+            }
+            requestUri = new UriBuilder(fileUri.GetLeftPart(UriPartial.Path))
+            {
+                Query = HttpUtility.BuildQueryString(queryParameters)
+            };
+            return GetFileDetailsAsync(requestUri.Uri.ToString(), versionId, includeVersions);
+        }
+
+        /// <summary>
+        /// Returns information about an specific blob.
+        /// </summary>
+        /// <param name="fileUrl">The file url. Url can contains the file version (https://..../container/blobname?versionId=xxxxxxx).</param>
+        /// <param name="loadVersions">Optional. Sets if must load all versions. It can increase response time.</param>
+        /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
+        public async Task<FileDetails> GetFileDetailsAsync(string fileUrl, string versionId, bool loadVersions = false)
+        {
+            FileDetails result;
+            var fileUri = new Uri(fileUrl);
+            UriBuilder requestUri;
+            IDictionary<string, string> queryParameters;
+
+            // Replaces "versionId" for the specified in the parameter (if it is in fileUrl, it will be replaced or removed).
+            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            queryParameters["versionId"] = versionId;
+            queryParameters["loadVersions"] = loadVersions.ToString();
+            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/details")
+            {
+                Query = HttpUtility.BuildQueryString(queryParameters)
+            };
+
+            // 
+            Authorize();
+            result = await InnerHttpClient.FetchAsync<FileDetails>(HttpMethod.Get, requestUri.Uri.ToString());
+            return result;
         }
 
         public async Task<string> GenerateSasUrlAsync(string fileUrl, TimeSpan expiresOn)

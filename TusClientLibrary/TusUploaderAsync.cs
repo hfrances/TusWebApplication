@@ -15,29 +15,28 @@ namespace TusClientLibrary
         UploadToken UploadToken { get; }
         TusDotNetClient.TusClient InnerTusClient { get; }
         HttpClient InnerHttpClient { get; }
-        
+
         public Uri BaseAddress { get; }
-        public FileInfo FileInfo { get; }
         public string FileUrl { get; }
         public string RelativeUrl => new Uri(FileUrl).AbsolutePath;
 
-        internal TusUploaderAsync(Uri baseAddress, TusDotNetClient.TusClient tusClient, UploadToken uploadToken, FileInfo fileInfo, string fileUrl)
+        internal TusUploaderAsync(Uri baseAddress, TusDotNetClient.TusClient tusClient, UploadToken uploadToken, string fileUrl)
         {
             this.InnerTusClient = tusClient;
             this.BaseAddress = baseAddress;
             this.UploadToken = uploadToken;
-            this.FileInfo = fileInfo;
             this.FileUrl = fileUrl;
 
             this.InnerHttpClient = new HttpClient() { BaseAddress = baseAddress };
         }
 
-        
+
         public async Task UploadAsync(
+            FileInfo fileInfo,
             double chunkSize = 5D,
             ProgressedDelegate progressed = null)
         {
-            var uploadOperation = InnerTusClient.UploadAsync(this.FileUrl, this.FileInfo, chunkSize);
+            var uploadOperation = InnerTusClient.UploadAsync(this.FileUrl, fileInfo, chunkSize);
 
             if (progressed != null)
             {
@@ -46,7 +45,17 @@ namespace TusClientLibrary
                     progressed(transferred, total);
                 };
             }
-            await uploadOperation;
+
+            try
+            {
+                await uploadOperation;
+            }
+            catch (AggregateException ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
+            {
+                var response = qckdev.Text.Json.JsonConvert.DeserializeObject<TusResponse>(tusex.ResponseContent);
+
+                throw new Exception(response.Error?.Message ?? tusex.Message, tusex);
+            }
         }
 
     }

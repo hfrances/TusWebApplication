@@ -11,6 +11,7 @@ using System.Configuration;
 using TusConsoleApp.Configuration;
 using System.Collections.Generic;
 using TusClientLibrary;
+using System.Linq;
 
 namespace TusConsoleApp
 {
@@ -64,7 +65,7 @@ namespace TusConsoleApp
                         Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
 
                         (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
-                        uploader.Upload(5D, (transferred, total) =>
+                        uploader.Upload(file, 5D, (transferred, total) =>
                         {
                             Console.SetCursorPosition(position.Left, position.Top);
                             Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
@@ -85,12 +86,33 @@ namespace TusConsoleApp
 
                         /* Get details */
                         FileDetails details;
-                        details = client.GetFileDetails(uploader.FileUrl);
+                        details = client.GetFileDetails(uploader.FileUrl, includeVersions: true);
 
                         /* Generate SAS */
                         string sasUrl;
                         sasUrl = client.GenerateSasUrl(uploader.FileUrl, TimeSpan.FromMinutes(10));
+                        Console.WriteLine();
                         Console.WriteLine($"Url SAS:\t{sasUrl}");
+
+                        /* Generate SAS of previous version (if exists) */
+                        var previousVersion = details.Versions.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);
+
+                        if (previousVersion != null)
+                        {
+                            string urlWithVer = $"{uploader.FileUrl}?versionId={Uri.EscapeDataString(details.VersionId)}";
+                            FileDetails detailsWithVer;
+                            string sasUrlWithVer;
+
+                            detailsWithVer = client.GetFileDetails(urlWithVer);
+                            sasUrlWithVer = client.GenerateSasUrl(urlWithVer, TimeSpan.FromMinutes(10));
+                            Console.WriteLine();
+                            Console.WriteLine("Previous version:");
+                            Console.WriteLine($"Created on:\t{detailsWithVer.CreatedOn}");
+                            Console.WriteLine($"Url SAS:\t{sasUrlWithVer}");
+                        }
+
+                        Console.WriteLine();
+
                     }
                     else
                     {

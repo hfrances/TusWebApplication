@@ -1,5 +1,7 @@
 ﻿using Azure.Storage.Blobs.Models;
 using Azure.Storage.Blobs.Specialized;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,21 +17,28 @@ namespace TusWebApplication.TusAzure
 
         protected Azure.Storage.Blobs.BlobServiceClient BlobService { get; }
         protected string DefaultContainer { get; }
+        protected IHttpContextAccessor HttpContextAccessor { get; }
+        protected ILogger Logger { get; }
+
         public Dictionary<string, BlobInfo> Blobs { get; } = new Dictionary<string, BlobInfo>();
 
 
-        public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer)
+        public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
         {
             this.StoreName = storeName;
             this.BlobService = TusAzureHelper.CreateBlobServiceClient(accountName, accountKey);
             this.DefaultContainer = defaultContainer;
+            this.HttpContextAccessor = httpContextAccessor;
+            this.Logger = logger;
         }
 
-        public TusAzureStore(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer)
+        public TusAzureStore(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
         {
             this.StoreName = storeName;
             this.BlobService = blobService;
             this.DefaultContainer = defaultContainer;
+            this.HttpContextAccessor = httpContextAccessor;
+            this.Logger = logger;
         }
 
 
@@ -62,7 +71,7 @@ namespace TusWebApplication.TusAzure
                     blobInfo.QueuePosition += 1;
                     using (var memo = new MemoryStream())
                     {
-                        Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. BlockId: {blockId}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
+                        Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. BlockId: {blockId}. Queue item: {blobInfo.QueuePosition}/{blobInfo.QueueCount}");
 
                         await stream.CopyToAsync(memo, cancellationToken);
                         memo.Position = 0;
@@ -79,7 +88,7 @@ namespace TusWebApplication.TusAzure
                         _ = await blobInfo.Blob.StageBlockAsync(blockId, memo, cancellationToken: cancellationToken);
                         blobInfo.SizeOffset += length;
                         blobInfo.BlockNames.Add(blockId);
-                        Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. BlockId: {blockId}. Done.");
+                        Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. BlockId: {blockId}. Done.");
                     }
                     if (blobInfo.SizeOffset == blobInfo.UploadLength)
                     {
@@ -90,18 +99,26 @@ namespace TusWebApplication.TusAzure
                             // Commit
                             var commitOptions = TusAzureHelper.CreateCommitBlockListOptions(blobInfo);
                             var contentHash = commitOptions.HttpHeaders.ContentHash;
+                            var hash = Convert.ToBase64String(contentHash ?? Array.Empty<byte>());
 
-                            Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. Hash: {Convert.ToBase64String(contentHash ?? Array.Empty<byte>())}. Commiting...");
-                            await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
-                            Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                            Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. Hash: {hash}. Commiting...");
+                            if (!string.IsNullOrEmpty(blobInfo.ValidateHash) && blobInfo.ValidateHash != hash)
+                            {
+                                throw new ArgumentException($"Hash in the request token is different from the uploaded file.");
+                            }
+                            else
+                            {
+                                await blobInfo.Blob.CommitBlockListAsync(blobInfo.BlockNames, commitOptions, cancellationToken: cancellationToken);
+                                Logger.LogInformation($"FileId: {this.StoreName}/{blobInfo.FileId}. Commited. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
 
-                            // Validate.
-                            var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
-                            var blob = container.GetBlobClient(blobInfo.BlobName);
-                            blob.GetHashCode();
-                            var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
-                            uri.ToString();
-                            Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                                // Validate.
+                                var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
+                                var blob = container.GetBlobClient(blobInfo.BlobName);
+                                blob.GetHashCode();
+                                var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
+                                uri.ToString();
+                                Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                            }
                         }
                         catch (Exception ex)
                         {
@@ -120,38 +137,77 @@ namespace TusWebApplication.TusAzure
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"FileId: {this.StoreName}/{blobInfo.FileId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
+                Logger.LogError($"FileId: {this.StoreName}/{blobInfo.FileId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime.Value}");
                 throw;
             }
         }
 
         public async Task<string> CreateFileAsync(long uploadLength, string metadata, CancellationToken cancellationToken)
         {
-            var container = TusAzureHelper.GetContainer(this.BlobService, metadata, this.DefaultContainer);
-            var blobName = TusAzureHelper.GetBlobName(metadata);
-            var useQueueAsync = TusAzureHelper.GetUseQueueAsync(metadata);
-            var fileName = TusAzureHelper.GetFileName(metadata);
-            string blobId;
-            BlockBlobClient blob;
+            System.Security.Claims.ClaimsPrincipal? user = null;
 
-            if (string.IsNullOrEmpty(blobName))
+            if (HttpContextAccessor?.HttpContext != null)
             {
-                blobName = Guid.NewGuid().ToString();
+                user = await Authentication.TusAuthenticationHelper.GetUser(HttpContextAccessor.HttpContext, Authentication.Constants.UPLOAD_FILE_SCHEMA);
             }
-            blob = container.GetBlockBlobClient(blobName);
-            blobId = $"{blob.BlobContainerName}/{blob.Name}";
-
-            if (await blob.ExistsAsync(cancellationToken))
+            if (user == null)
             {
-                var allowReplace = TusAzureHelper.GetAllowReplace(metadata);
+                throw new ArgumentException($"Invalid upload token.");
+            }
+            else
+            {
+                var properties = Authentication.TusAuthenticationHelper.ParseClaims(user.Claims);
 
-                if (allowReplace != true)
+                // Get upload properties.
+                var container = TusAzureHelper.GetContainer(this.BlobService, properties.Container ?? this.DefaultContainer);
+                var blobName = properties.Blob;
+                var useQueueAsync = properties.UseQueueAsync;
+                var fileName = properties.FileName;
+                string blobId;
+                BlockBlobClient blob;
+
+                if (properties.Size != uploadLength)
                 {
-                    throw new ArgumentException($"Blob {this.StoreName}/{blobId} already exists. Set 'replace' argument for overwrite it.");
+                    // Check that requested token length is the same that the final length.
+                    throw new ArgumentException($"The size in the request token ({properties.Size}) is different than the size in the uploading file ({uploadLength}).");
+                }
+                else if (properties.FirstRequestExpired < DateTimeOffset.UtcNow)
+                {
+                    // Check that the token has not expired.
+                    var ex = new ArgumentException($"Request token has expired.");
+
+                    Logger?.LogError(ex, $"Request: {properties.FirstRequestExpired}. Current: {DateTimeOffset.UtcNow}. Differnce: {properties.FirstRequestExpired - DateTimeOffset.UtcNow}");
+                    throw ex;
+                }
+                else
+                {
+                    // If blobName was not set, create a new automatically.
+                    if (string.IsNullOrEmpty(blobName))
+                    {
+                        blobName = Guid.NewGuid().ToString();
+                    }
+                    blob = container.GetBlockBlobClient(blobName);
+                    blobId = $"{blob.BlobContainerName}/{blob.Name}";
+
+                    // Check if blob already exists and it can be replaced.
+                    if (await blob.ExistsAsync(cancellationToken))
+                    {
+                        var allowReplace = properties.Replace;
+
+                        if (allowReplace != true)
+                        {
+                            throw new ArgumentException($"Blob {this.StoreName}/{blobId} already exists. Set 'replace' argument to overwrite it.");
+                        }
+                    }
+
+                    // Create blob.
+                    Blobs.Add(blobId, new BlobInfo(blobId, blob.BlobContainerName, blob.Name, fileName, metadata, uploadLength, useQueueAsync, blob)
+                    {
+                        ValidateHash = properties.Hash
+                    });
+                    return blobId;
                 }
             }
-            Blobs.Add(blobId, new BlobInfo(blobId, blob.BlobContainerName, blob.Name, fileName, metadata, uploadLength, useQueueAsync, blob));
-            return blobId;
         }
 
         public Task<bool> FileExistAsync(string fileId, CancellationToken cancellationToken)

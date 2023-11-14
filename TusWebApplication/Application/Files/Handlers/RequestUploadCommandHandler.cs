@@ -31,29 +31,30 @@ namespace TusWebApplication.Application.Files.Handlers
             var issuerSigningKey = JwtBearerOptions.Get(TusAzure.Authentication.Constants.UPLOAD_FILE_SCHEMA)?.TokenValidationParameters.IssuerSigningKey;
             var tokenLifeTimespan = JwtBearerMoreOptions.Get(TusAzure.Authentication.Constants.UPLOAD_FILE_SCHEMA)?.TokenLifeTimespan;
             var firstRequestLifeTimespan = JwtBearerMoreOptions.Get(TusAzure.Authentication.Constants.UPLOAD_FILE_SCHEMA)?.FirstRequestLifeTimeSpan;
-            var claims = new List<System.Security.Claims.Claim>();
-            qckdev.Authentication.JwtBearer.JwtToken token;
-
-            claims.Add(new System.Security.Claims.Claim("container", request.Container));
-            claims.Add(new System.Security.Claims.Claim("file-name", request.Body.FileName));
-            claims.Add(new System.Security.Claims.Claim("blob", request.Body.Blob ?? ""));
-            claims.Add(new System.Security.Claims.Claim("replace", request.Body.Replace.ToString()));
-            claims.Add(new System.Security.Claims.Claim("size", request.Body.Size.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-            claims.Add(new System.Security.Claims.Claim("hash", request.Body.Hash ?? ""));
-
+            
             if (firstRequestLifeTimespan == null)
             {
                 throw new NullReferenceException("First request life cannot be found."); // TODO: Crear excepción propia.
             }
             else
             {
+                qckdev.Authentication.JwtBearer.JwtToken token;
                 var firstRequestExpired = DateTimeOffset.UtcNow.Add(firstRequestLifeTimespan.Value);
-
-                claims.Add(new System.Security.Claims.Claim("expired", firstRequestExpired.ToString("O", System.Globalization.CultureInfo.InvariantCulture)));
+                var properties = new TusAzure.Authentication.UploadProperties
+                {
+                    Container = request.Container,
+                    FileName = request.Body.FileName,
+                    Blob = request.Body.Blob,
+                    Replace = request.Body.Replace,
+                    Size = request.Body.Size,
+                    Hash = request.Body.Hash,
+                    UseQueueAsync = request.Body.UseQueueAsync,
+                    FirstRequestExpired = firstRequestExpired
+                };
 
                 token = qckdev.Authentication.JwtBearer.JwtGenerator.CreateToken(
                     issuerSigningKey, "blob",
-                    claims: claims,
+                    claims: TusAzure.Authentication.TusAuthenticationHelper.CreateClaims(properties),
                     lifespan: tokenLifeTimespan
                 );
 

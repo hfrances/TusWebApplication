@@ -75,6 +75,10 @@ namespace TusWebApplication.TusAzure
         /// Hash algorithm for calculating MD5 value. 
         /// </summary>
         public HashAlgorithm Hasher { get; }
+        /// <summary>
+        /// Theorical MD5 hash to compare with <see cref="Hasher"/> at the end of the process. Null for not validating.
+        /// </summary>
+        public string? ValidateHash { get; set; }
 
         /// <summary>
         /// Gets or sets if the process is already finished.

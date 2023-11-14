@@ -43,7 +43,7 @@ namespace TusWebApplication.Application.Files.Handlers
                                 query.Add("versionId", request.Parameters.VersionId);
                             }
                             query.Add("sv", "1");
-                            query.Add("se", request.Body.ExpiresOn.ToString("s"));
+                            query.Add("se", request.Body.ExpiresOn.ToString("O"));
                             query.Add("sig", token);
                             return QueryHelpers.AddQueryString("", query);
 

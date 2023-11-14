@@ -18,18 +18,13 @@ namespace TusClientLibrary
             tusClient.AdditionalHeaders.Add("Authorization", $"Bearer {accessToken}");
         }
 
-        public static (string key, string value)[] CreateMedatada(
-            string containerName, string blobName, bool replace,
-            IDictionary<string, string> tags, IDictionary<string, string> metadata,
-            bool useQueueAsync)
+        public static (string key, string value)[] CreateMedatada(string fileName,
+            IDictionary<string, string> tags, IDictionary<string, string> metadata)
         {
             var metadataParsed = new List<(string key, string value)>
             {
                 // properties exclusively for upload process.
-                ("BLOB:container", containerName), // target container.
-                ("BLOB:name", blobName ?? string.Empty), // blob storage name.
-                ("BLOB:replace", replace.ToString()), // if exists, replace it (requires BLOB:name).
-                ("BLOB:useQueueAsync", useQueueAsync.ToString()), // if true, after upload from client to service, it does not wait for uplodad from service to blob storage.
+                ("filename", fileName)
             };
 
             if (tags != null)

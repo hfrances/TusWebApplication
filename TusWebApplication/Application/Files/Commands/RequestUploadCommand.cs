@@ -39,6 +39,11 @@ namespace TusWebApplication.Application.Files.Commands
             /// Hash of the file. This value is optional and can be null.
             /// </summary>
             public string? Hash { get; set; }
+
+            /// <summary>
+            /// If true, it will upload file chunks without waiting that they are already saved in the azure blob. False otherwise.
+            /// </summary>
+            public bool UseQueueAsync { get; set; }
         }
 
         /// <summary>

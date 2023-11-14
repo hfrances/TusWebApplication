@@ -7,6 +7,7 @@ using tusdotnet.Interfaces;
 using System.Threading;
 using static System.Reflection.Metadata.BlobBuilder;
 using System.IO;
+using tusdotnet.Parsers;
 
 namespace TusWebApplication.TusAzure
 {
@@ -22,22 +23,9 @@ namespace TusWebApplication.TusAzure
             return new Azure.Storage.Blobs.BlobServiceClient(blobUri, credentials);
         }
 
-        public static Azure.Storage.Blobs.BlobContainerClient GetContainer(Azure.Storage.Blobs.BlobServiceClient client, string metadata, string defaultContainer)
+
+        public static Azure.Storage.Blobs.BlobContainerClient GetContainer(Azure.Storage.Blobs.BlobServiceClient client, string containerName)
         {
-            var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, metadata)?.Metadata;
-            Metadata? containerMetadata;
-            string containerName;
-
-            containerMetadata = metadataParsed?.SingleOrDefault(x => x.Key.Equals("BLOB:container", StringComparison.OrdinalIgnoreCase)).Value;
-            if (containerMetadata == null || containerMetadata.HasEmptyValue)
-            {
-                containerName = defaultContainer;
-            }
-            else
-            {
-                containerName = containerMetadata.GetString(System.Text.Encoding.UTF8);
-            }
-
             var container = client.GetBlobContainerClient(containerName);
 
             if (container == null)
@@ -48,55 +36,6 @@ namespace TusWebApplication.TusAzure
             {
                 return container;
             }
-        }
-
-        public static string? GetBlobName(string metadata)
-        {
-            return GetValueFromMetadata(metadata, "BLOB:name", null);
-        }
-
-        public static bool? GetAllowReplace(string metadata)
-        {
-            bool? rdo;
-            var value = GetValueFromMetadata(metadata, "BLOB:replace", null);
-
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                rdo = null;
-            }
-            else
-            {
-                rdo = bool.Parse(value);
-            }
-            return rdo;
-        }
-
-        public static bool GetUseQueueAsync(string metadata)
-        {
-            return bool.Parse(GetValueFromMetadata(metadata, "BLOB:useQueueAsync", null) ?? "false");
-        }
-
-        public static string? GetFileName(string metadata)
-        {
-            return GetValueFromMetadata(metadata, "filename", null);
-        }
-
-        private static string? GetValueFromMetadata(string metadata, string key, string? defaultValue = null)
-        {
-            var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, metadata)?.Metadata;
-            Metadata? blobMetadata;
-            string? rdo;
-
-            blobMetadata = metadataParsed?.SingleOrDefault(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase)).Value;
-            if (blobMetadata == null)
-            {
-                rdo = defaultValue;
-            }
-            else
-            {
-                rdo = blobMetadata.GetString(System.Text.Encoding.UTF8);
-            }
-            return rdo;
         }
 
         public static Task<ITusFile> GetFileAsync(Azure.Storage.Blobs.BlobServiceClient client, string fileId, CancellationToken cancellationToken)

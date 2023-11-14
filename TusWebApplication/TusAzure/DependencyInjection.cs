@@ -35,26 +35,33 @@ namespace TusWebApplication.TusAzure
                 {
                     foreach (var pair in settings)
                     {
+                        var httpContextAccesor = factory.GetRequiredService<IHttpContextAccessor>();
+                        ILogger logger;
+
                         if (pair.Value == null)
                         {
                             throw new NullReferenceException($"Settings not found for azure storage '{pair.Key}'.");
                         }
                         else if (pair.Value.CanUploadAsync)
                         {
+                            logger = factory.GetRequiredService<ILoggerFactory>().CreateLogger<TusAzureStoreQueued>();
                             tusAzureStores.Add(pair.Key, new TusAzureStoreQueued(
                                 pair.Key,
                                 pair.Value.AccountName ?? string.Empty,
                                 pair.Value.AccountKey ?? string.Empty,
-                                pair.Value.DefaultContainer ?? string.Empty
+                                pair.Value.DefaultContainer ?? string.Empty,
+                                httpContextAccesor, logger
                             ));
                         }
                         else
                         {
+                            logger = factory.GetRequiredService<ILoggerFactory>().CreateLogger<TusAzureStore>();
                             tusAzureStores.Add(pair.Key, new TusAzureStore(
                                 pair.Key,
                                 pair.Value.AccountName ?? string.Empty,
                                 pair.Value.AccountKey ?? string.Empty,
-                                pair.Value.DefaultContainer ?? string.Empty
+                                pair.Value.DefaultContainer ?? string.Empty,
+                                httpContextAccesor, logger
                             ));
                         }
                     }
@@ -143,7 +150,7 @@ namespace TusWebApplication.TusAzure
                 {
                     OnAuthorizeAsync = async ctx =>
                     {
-                        await AuthorizeAsync(ctx.HttpContext);
+                        await Authentication.TusAuthenticationHelper.AuthorizeAsync(ctx.HttpContext, Authentication.Constants.UPLOAD_FILE_SCHEMA);
 
                         //bool enableAuthorize = false;
 
@@ -251,40 +258,6 @@ namespace TusWebApplication.TusAzure
             };
 
             return Task.FromResult(config);
-        }
-
-        static async Task AuthorizeAsync(HttpContext context)
-        {
-            var schemaName = TusAzure.Authentication.Constants.UPLOAD_FILE_SCHEMA;
-            var authenticationResult = await context.AuthenticateAsync(schemaName);
-
-            if (authenticationResult.Succeeded)
-            {
-                var authorizationService = context.RequestServices.GetRequiredService<IAuthorizationService>();
-                var user = authenticationResult.Principal;
-                var policy =
-                    new AuthorizationPolicyBuilder(schemaName)
-                        .RequireAuthenticatedUser()
-                        .Build();
-                var authorizationResult = await authorizationService.AuthorizeAsync(user, policy);
-
-                if (authorizationResult.Succeeded)
-                {
-                    // Success.
-                    await Task.CompletedTask;
-                }
-                else
-                {
-                    // El usuario no puede realizar la operación.
-                    throw new qckdev.AspNetCore.HttpHandledException(System.Net.HttpStatusCode.Unauthorized, null);
-                }
-            }
-            else
-            {
-                // El usuario no está autenficiado.
-                throw new qckdev.AspNetCore.HttpHandledException(System.Net.HttpStatusCode.Unauthorized, authenticationResult.Failure?.Message);
-            }
-
         }
 
     }
