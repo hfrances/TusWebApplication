@@ -125,6 +125,10 @@ namespace TusClientLibrary
         {
             UploadToken uploadToken;
 
+            /* Authorize */
+            Authorize();
+
+            /* Create upload-token */
             uploadToken = InnerHttpClient.Fetch<UploadToken>(HttpMethod.Post, $"files/{storeName}/{containerName}/request-upload", new
             {
                 fileName,
