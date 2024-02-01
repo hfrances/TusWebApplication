@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -18,7 +19,8 @@ using TusWebApplication.TusAzure.Authentication;
 
 namespace TusWebApplication
 {
-    public class Startup
+    
+    internal class Startup
     {
         public Startup(IConfiguration configuration)
         {
@@ -34,8 +36,13 @@ namespace TusWebApplication
             var jwtTokenConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("_Default").Get<Settings.JwtTokenConfiguration>();
             var jwtTokenUploadConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("Upload").Get<TusAzure.Authentication.JwtTokenConfiguration>();
             var ipSafeListSettings = Configuration.GetSection("Security").GetSection("IpSafeList").Get<IpSafeListSettings>();
+            var corsSettings = Configuration.GetSection("Cors").Get<Settings.CorsSettings>() ?? new Settings.CorsSettings();
 
-            services.AddCors(opts => opts.AddDefaultPolicy(policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+            services.AddCors(opts => opts.AddDefaultPolicy(policy => policy
+                .AllowAnyMethod().AllowAnyHeader()
+                .WithOrigins(corsSettings.Origins ?? new[] { CorsConstants.AnyOrigin })
+                .WithExposedHeaders(corsSettings.ExposedHeaders))
+            );
 
             services.Configure<AzureBlobProvider.AzureStorageCredentialsSettings>(options =>
                 this.Configuration.GetSection("AzureStorageCredentials").Bind(options)
@@ -101,7 +108,7 @@ namespace TusWebApplication
             app.UseAuthorization();
 
             app.UseSerializedExceptionHandler();
-
+            
             app.UseTusAzure();
             
             app.UseEndpoints(endpoints =>

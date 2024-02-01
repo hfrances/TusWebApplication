@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-    <Version>3.0.0-alpha</Version>
+    <Version>3.0.0-alpha.1</Version>
     <Nullable>enable</Nullable>
     <Description>Provides access to upload and download files from Azure Blob Storage.</Description>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -21,7 +21,7 @@
     <PackageReference Include="qckdev.Extensions.Configuration.Abstractions" Version="1.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
     <PackageReference Include="System.Net.Http.Json" Version="6.0.1" />
-    <PackageReference Include="tusdotnet" Version="2.7.1" />
+    <PackageReference Include="tusdotnet" Version="2.7.2" />
   </ItemGroup>
 
   <ItemGroup>
