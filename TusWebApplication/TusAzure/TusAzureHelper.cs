@@ -1,13 +1,9 @@
 ﻿using System.Collections.Generic;
 using System;
 using tusdotnet.Models;
-using System.Linq;
 using System.Threading.Tasks;
 using tusdotnet.Interfaces;
 using System.Threading;
-using static System.Reflection.Metadata.BlobBuilder;
-using System.IO;
-using tusdotnet.Parsers;
 
 namespace TusWebApplication.TusAzure
 {
@@ -22,7 +18,6 @@ namespace TusWebApplication.TusAzure
 
             return new Azure.Storage.Blobs.BlobServiceClient(blobUri, credentials);
         }
-
 
         public static Azure.Storage.Blobs.BlobContainerClient GetContainer(Azure.Storage.Blobs.BlobServiceClient client, string containerName)
         {
@@ -86,10 +81,12 @@ namespace TusWebApplication.TusAzure
                 }
             };
             var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, blobInfo.Metadata).Metadata;
+            var fileNameFixed = Uri.EscapeDataString(blobInfo.FileName);
 
             foreach (var (key, value) in metadataParsed)
             {
                 var stringValue = value.GetString(System.Text.Encoding.UTF8);
+                var stringValueFixed = Uri.EscapeDataString(stringValue);
 
                 if (key.StartsWith("BLOB:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -97,15 +94,15 @@ namespace TusWebApplication.TusAzure
                 }
                 else if (key.StartsWith("TAG:", StringComparison.OrdinalIgnoreCase))
                 {
-                    commitOptions.Tags.Add(key[4..], stringValue);
+                    commitOptions.Tags.Add(key[4..], stringValueFixed);
                 }
                 else
                 {
-                    commitOptions.Metadata.Add(key, stringValue);
+                    commitOptions.Metadata.Add(key, stringValueFixed);
                 }
             }
 
-            commitOptions.Metadata["filename"] = blobInfo.FileName;
+            commitOptions.Metadata["filename"] = fileNameFixed;
             return commitOptions;
         }
 
