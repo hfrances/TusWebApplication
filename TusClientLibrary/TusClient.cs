@@ -199,7 +199,6 @@ namespace TusClientLibrary
             return result;
         }
 
-
         public string GenerateSasUrl(string fileUrl, TimeSpan expiresOn)
         {
             var fileUri = new Uri(fileUrl);
@@ -230,6 +229,22 @@ namespace TusClientLibrary
             return result.Uri.ToString();
         }
 
+        /// <summary>
+        /// Uploads the specified file using a request upload token.
+        /// </summary>
+        /// <param name="fileUrl">Url of the file to upload. Use <seealso cref="RequestUpload"/> to get one.</param>
+        /// <param name="requestToken">Request token of the file to upload. Use <seealso cref="RequestUpload"/> to get one.</param>
+        /// <param name="fileInfo"><see cref="System.IO.FileInfo"/> of the file to upload.</param>
+        /// <param name="chunkSize">Size (in MB) of the chunks to send.</param>
+        /// <param name="progressed">Callback to report upload progress.</param>
+        public static void UploadFile(
+            string fileUrl, string requestToken,
+            FileInfo fileInfo,
+            double chunkSize = 5D,
+            ProgressedDelegate progressed = null)
+        {
+            TusUploader.Upload(fileUrl, requestToken, fileInfo, chunkSize, progressed);
+        }
 
         private void Authorize()
         {

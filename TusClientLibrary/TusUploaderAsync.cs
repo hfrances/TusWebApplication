@@ -12,13 +12,13 @@ namespace TusClientLibrary
     public sealed class TusUploaderAsync
     {
 
-        UploadToken UploadToken { get; }
         TusDotNetClient.TusClient InnerTusClient { get; }
         HttpClient InnerHttpClient { get; }
 
         public Uri BaseAddress { get; }
         public string FileUrl { get; }
         public string RelativeUrl => new Uri(FileUrl).AbsolutePath;
+        public UploadToken UploadToken { get; }
 
         internal TusUploaderAsync(Uri baseAddress, TusDotNetClient.TusClient tusClient, UploadToken uploadToken, string fileUrl)
         {
@@ -30,7 +30,12 @@ namespace TusClientLibrary
             this.InnerHttpClient = new HttpClient() { BaseAddress = baseAddress };
         }
 
-
+        /// <summary>
+        /// Uploads the specified file using a request upload token.
+        /// </summary>
+        /// <param name="fileInfo"><see cref="System.IO.FileInfo"/> of the file to upload.</param>
+        /// <param name="chunkSize">Size (in MB) of the chunks to send.</param>
+        /// <param name="progressed">Callback to report upload progress.</param>
         public async Task UploadAsync(
             FileInfo fileInfo,
             double chunkSize = 5D,
@@ -56,6 +61,31 @@ namespace TusClientLibrary
 
                 throw new Exception(response.Error?.Message ?? tusex.Message, tusex);
             }
+        }
+
+        /// <summary>
+        /// Uploads the specified file using a request upload token.
+        /// </summary>
+        /// <param name="fileUrl">Url of the file to upload. Use <seealso cref="RequestUpload"/> to get one.</param>
+        /// <param name="requestToken">Request token of the file to upload. Use <seealso cref="RequestUpload"/> to get one.</param>
+        /// <param name="fileInfo"><see cref="System.IO.FileInfo"/> of the file to upload.</param>
+        /// <param name="chunkSize">Size (in MB) of the chunks to send.</param>
+        /// <param name="progressed">Callback to report upload progress.</param>
+        public static Task UploadAsync(
+            string fileUrl, string requestToken,
+            FileInfo fileInfo,
+            double chunkSize = 5D,
+            ProgressedDelegate progressed = null)
+        {
+            var builder = new UriBuilder(fileUrl);
+            var baseAddress = new Uri(builder.Uri.GetLeftPart(UriPartial.Authority));
+            var tusClient = new TusDotNetClient.TusClient();
+            var token = new UploadToken { AccessToken = requestToken };
+            TusUploaderAsync uploader;
+
+            tusClient.ApplyAuthorization(requestToken);
+            uploader = new TusUploaderAsync(baseAddress, tusClient, token, fileUrl);
+            return uploader.UploadAsync(fileInfo, chunkSize, progressed);
         }
 
     }
