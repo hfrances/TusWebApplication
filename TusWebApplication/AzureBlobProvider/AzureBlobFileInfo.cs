@@ -23,8 +23,8 @@ namespace TusWebApplication.AzureBlobProvider
             if (this.Exists)
             {
                 var properties = blob.GetProperties().Value;
-
-                this.Name = properties.Metadata.FirstOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value ?? blob.Name;
+                var metadata = properties.Metadata.ToDictionary(x => x.Key, x => Uri.UnescapeDataString(x.Value), StringComparer.OrdinalIgnoreCase);
+                this.Name = metadata.FirstOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value ?? blob.Name;
                 this.LastModified = properties.LastModified;
             }
             else

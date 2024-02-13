@@ -59,11 +59,12 @@ namespace TusWebApplication.Application.Files.Handlers
                     else
                     {
                         BlobProperties properties;
-                        IDictionary<string, string> tags;
+                        IDictionary<string, string> tags, metadata;
                         IEnumerable<FileVersionDto>? blobVersions = null;
                         Uri uri;
 
                         properties = (await blob.GetPropertiesAsync(cancellationToken: cancellationToken)).Value;
+                        metadata = properties.Metadata.ToDictionary(x => x.Key, x => Uri.UnescapeDataString(x.Value), StringComparer.OrdinalIgnoreCase);
                         tags = (await blob.GetTagsAsync(cancellationToken: cancellationToken)).Value.Tags;
 
                         // Generar url.
@@ -86,9 +87,9 @@ namespace TusWebApplication.Application.Files.Handlers
                         return new FileDto
                         {
                             BlobId = $"{container.Name}/{blob.Name}",
-                            Name = properties.Metadata.SingleOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value,
+                            Name = metadata.SingleOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value,
                             Length = properties.ContentLength,
-                            Metadata = properties.Metadata,
+                            Metadata = metadata,
                             Tags = tags,
                             Url = uri,
                             Checksum = (properties.ContentHash == null) ?
