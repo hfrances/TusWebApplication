@@ -2,7 +2,7 @@
   "profiles": {
     "TusConsoleApp": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\dotnet.log.7z\" /store:\"hfcloud_eu\" /container:other /useQueueAsync:true /blob2:afbc8e96-d41e-409f-b9f5-9c03b49acc93 /replace2"
+      "commandLineArgs": "\"C:\\Users\\hfrances\\Downloads\\Screenshot_20240227_165250_com.deusens.hmy.fitting.jpg\" /store:\"hfcloud_eu\" /container:other /useQueueAsync2:true /blob2:afbc8e96-d41e-409f-b9f5-9c03b49acc93 /replace2"
     }
   }
 }
