@@ -78,9 +78,9 @@ namespace TusClientLibrary
             }
             catch (AggregateException ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
             {
-                var response = qckdev.Text.Json.JsonConvert.DeserializeObject<TusResponse>(tusex.ResponseContent);
+                var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exception(response.Error?.Message ?? tusex.Message, tusex);
+                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
             }
         }
 
