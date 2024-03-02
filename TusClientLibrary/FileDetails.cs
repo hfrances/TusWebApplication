@@ -21,6 +21,11 @@ namespace TusClientLibrary
         public string VersionId { get; set; }
         public IEnumerable<FileVersion> Versions { get; set; }
 
+#if NEWTONSOFT
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+#else
+        [System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
+#endif
         public UploadStatus? Status { get; set; }
         public double? UploadPercentage { get; set; }
 

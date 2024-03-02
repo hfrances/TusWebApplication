@@ -39,7 +39,8 @@ namespace TusConsoleApp
                         Thread.Sleep(2000); // Esperar a que cargue el servidor.
 
                         //TestModelo1(settings, storeName, containerName, file, blobName, replace, useQueueAsync);
-                        TestModelo3(settings, storeName, containerName, file, blobName, replace, useQueueAsync);
+                        //TestModelo3(settings, storeName, containerName, file, blobName, replace, useQueueAsync);
+                        TestModelo3_ByStream(settings, storeName, containerName, file, blobName, replace, useQueueAsync);
 
                         Console.WriteLine();
                     }
@@ -148,6 +149,52 @@ namespace TusConsoleApp
 
         }
 
+        static void TestModelo3_ByStream(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync)
+        {
+            var stw = System.Diagnostics.Stopwatch.StartNew();
+            var client = new TusClient(
+                new Uri(settings.BaseAddress), new TusClientCredentials
+                {
+                    UserName = settings.UserName,
+                    Login = settings.Login,
+                    Password = settings.Password
+                });
+
+            var uploader = client.CreateFile(
+                storeName, containerName,
+                $"{System.IO.Path.GetFileNameWithoutExtension(file.Name)}+{DateTimeOffset.Now.ToString("s")}{file.Extension}", file.Length,
+                blobName, replace,
+                new Dictionary<string, string>
+                {
+                    { "extension", file.Extension }
+                },
+                new Dictionary<string, string>
+                {
+                    { "factor", "1,2" }
+                },
+                useQueueAsync
+            );
+            Console.WriteLine($"File path:\t{uploader.FileUrl}");
+            Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
+
+            // Upload file in different layer.
+            using (var stream = file.OpenRead())
+            {
+                (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
+                TusClient.UploadFile(uploader.FileUrl, uploader.UploadToken.AccessToken, stream, 5D, (transferred, total) =>
+                {
+                    Console.SetCursorPosition(position.Left, position.Top);
+                    Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
+                });
+                Console.WriteLine();
+                Console.WriteLine($"Elapsed time:\t{stw.Elapsed}"); ;
+            }
+
+            // Print result.
+            PrintResult(client, uploader.FileUrl, file);
+
+        }
+
         static void PrintResult(TusClient client, string fileUrl, FileInfo file)
         {
             /* Calculate Hash */
@@ -160,20 +207,31 @@ namespace TusConsoleApp
                 }
             }
             Console.WriteLine($"Hash:\t\t{contentHash}");
+            Console.WriteLine();
 
             /* Get details */
-            FileDetails details;
-            details = client.GetFileDetails(fileUrl, includeVersions: true);
+            FileDetails details = null;
+            Console.WriteLine("Checking file status...");
+            do
+            {
+                if (details != null)
+                {
+                    System.Threading.Thread.Sleep(1000);
+                }
+                details = client.GetFileDetails(fileUrl, includeVersions: true);
+                Console.WriteLine($"Status: {details.Status?.ToString() ?? "(null)"}; Percentaje: {details.UploadPercentage?.ToString("P") ?? "(null)"}");
+            }
+            while (details.Status == UploadStatus.Uploading);
+            Console.WriteLine();
 
             /* Generate SAS */
             string sasUrl;
             sasUrl = client.GenerateSasUrl(fileUrl, TimeSpan.FromMinutes(10));
-            Console.WriteLine();
             Console.WriteLine($"Created on:\t{details.CreatedOn}");
             Console.WriteLine($"Url SAS:\t{sasUrl}");
 
             /* Generate SAS of previous version (if exists) */
-            var previousVersion = details.Versions.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);
+            var previousVersion = details.Versions?.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);
 
             if (previousVersion == null)
             {

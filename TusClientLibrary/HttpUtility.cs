@@ -48,7 +48,7 @@ namespace TusClientLibrary
             foreach (var parameter in queryParameters)
             {
                 string key = Uri.EscapeDataString(parameter.Key);
-                string value = Uri.EscapeDataString(parameter.Value);
+                string value = (parameter.Value == null) ? null : Uri.EscapeDataString(parameter.Value);
                 keyValuePairs.Add($"{key}={value}");
             }
             return string.Join("&", keyValuePairs);

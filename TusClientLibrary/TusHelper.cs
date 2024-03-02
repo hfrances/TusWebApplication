@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TusClientLibrary
@@ -40,6 +41,21 @@ namespace TusClientLibrary
             }
 
             return metadataParsed.ToArray();
+        }
+
+        public static TusResponse ParseResponse(string value)
+        {
+            TusResponse result;
+
+            if (qckdev.Text.Json.JsonConvert.IsDeserializable(value))
+            {
+                result = qckdev.Text.Json.JsonConvert.DeserializeObject<TusResponse>(value);
+            }
+            else
+            {
+                result = null;
+            }
+            return result;
         }
 
     }
