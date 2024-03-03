@@ -25,6 +25,14 @@ namespace TusWebApplication.TusAzure
         /// </summary>
         public string FileName { get; set; }
         /// <summary>
+        /// Gets or sets the MIME content-type of the blob.
+        /// </summary>
+        public string? ContentType { get; set; }
+        /// <summary>
+        /// Gets or sets the natural languages used by this resource.
+        /// </summary>
+        public string? ContentLanguage { get; set; }
+        /// <summary>
         /// Metadata to upload into the blob.
         /// </summary>
         public string Metadata { get; }

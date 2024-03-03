@@ -77,7 +77,9 @@ namespace TusWebApplication.TusAzure
                 Metadata = new Dictionary<string, string>(),
                 HttpHeaders = new Azure.Storage.Blobs.Models.BlobHttpHeaders()
                 {
-                    ContentHash = blobInfo.Hasher.Hash
+                    ContentHash = blobInfo.Hasher.Hash,
+                    ContentType = blobInfo.ContentType,
+                    ContentLanguage = blobInfo.ContentLanguage,
                 }
             };
             var metadataParsed = tusdotnet.Parsers.MetadataParser.ParseAndValidate(MetadataParsingStrategy.AllowEmptyValues, blobInfo.Metadata).Metadata;

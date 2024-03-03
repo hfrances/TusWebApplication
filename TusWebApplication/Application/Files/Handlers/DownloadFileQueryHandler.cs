@@ -1,22 +1,17 @@
-﻿using Azure.Storage.Blobs;
-using MediatR;
-using Microsoft.Extensions.FileProviders;
+﻿using MediatR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Microsoft.OpenApi.Writers;
 using System;
-using System.ComponentModel;
-using System.Reflection.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
-using TusWebApplication.Application.Files.Dtos;
 using TusWebApplication.Application.Files.Helpers;
 using TusWebApplication.Application.Files.Queries;
+using TusWebApplication.AzureBlobProvider;
 
 namespace TusWebApplication.Application.Files.Handlers
 {
 
-    sealed class DownloadFileQueryHandler : IRequestHandler<DownloadFileQuery, Microsoft.Extensions.FileProviders.IFileInfo>
+    sealed class DownloadFileQueryHandler : IRequestHandler<DownloadFileQuery, IDownloadableFileInfo>
     {
 
         AzureBlobProvider.AzureStorageCredentialsSettings AzureSettings { get; }
@@ -35,7 +30,7 @@ namespace TusWebApplication.Application.Files.Handlers
             this.Logger = logger;
         }
 
-        public Task<IFileInfo> Handle(DownloadFileQuery request, CancellationToken cancellationToken)
+        public Task<IDownloadableFileInfo> Handle(DownloadFileQuery request, CancellationToken cancellationToken)
             => BlobHelper.LoadBlob(
                 AzureSettings, TusAzureBlobManager,
                 request.StoreName, request.ContainerName, request.BlobName, request.Parameters?.VersionId,

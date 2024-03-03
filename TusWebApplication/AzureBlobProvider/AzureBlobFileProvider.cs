@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace TusWebApplication.AzureBlobProvider
 {
-    public sealed class AzureBlobFileProvider : IFileProvider
+    public sealed class AzureBlobFileProvider : IDownloadableFileProvider
     {
 
         AzureStorageCredentialsSettings AzureSettings { get; }
@@ -17,7 +17,7 @@ namespace TusWebApplication.AzureBlobProvider
             this.AzureSettings = azureOptions.Value;
         }
 
-        public IFileInfo GetFileInfo(string subpath)
+        public IDownloadableFileInfo GetFileInfo(string subpath)
         {
             var url = new Uri(new Uri("http://localhost"), subpath);
             var blobId = url.AbsolutePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);

@@ -1,5 +1,4 @@
 ﻿using Azure.Storage.Blobs.Specialized;
-using Microsoft.Extensions.FileProviders;
 using System;
 using System.IO;
 using System.Linq;
@@ -7,7 +6,7 @@ using System.Linq;
 namespace TusWebApplication.AzureBlobProvider
 {
 
-    sealed class AzureBlobFileInfo : IFileInfo
+    sealed class AzureBlobFileInfo : IDownloadableFileInfo
     {
         long _length;
 
@@ -25,6 +24,7 @@ namespace TusWebApplication.AzureBlobProvider
                 var properties = blob.GetProperties().Value;
                 var metadata = properties.Metadata.ToDictionary(x => x.Key, x => Uri.UnescapeDataString(x.Value), StringComparer.OrdinalIgnoreCase);
                 this.Name = metadata.FirstOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value ?? blob.Name;
+                this.ContentType = properties.ContentType ?? "application/octet-stream";
                 this.LastModified = properties.LastModified;
             }
             else
@@ -36,6 +36,8 @@ namespace TusWebApplication.AzureBlobProvider
         public string Name { get; }
 
         public bool IsDirectory => false;
+
+        public string ContentType { get; }
 
         public DateTimeOffset LastModified { get; }
 

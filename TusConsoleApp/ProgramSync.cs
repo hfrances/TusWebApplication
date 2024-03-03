@@ -87,7 +87,8 @@ namespace TusConsoleApp
                 {
                     { "factor", "1,2" }
                 },
-                useQueueAsync
+                useQueueAsync,
+                Common.CalculateMD5(file.FullName)
             );
             Console.WriteLine($"File path:\t{uploader.FileUrl}");
             Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
@@ -129,7 +130,8 @@ namespace TusConsoleApp
                 {
                     { "factor", "1,2" }
                 },
-                useQueueAsync
+                useQueueAsync,
+                Common.CalculateMD5(file.FullName)
             );
             Console.WriteLine($"File path:\t{uploader.FileUrl}");
             Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
@@ -164,15 +166,20 @@ namespace TusConsoleApp
                 storeName, containerName,
                 $"{System.IO.Path.GetFileNameWithoutExtension(file.Name)}+{DateTimeOffset.Now.ToString("s")}{file.Extension}", file.Length,
                 blobName, replace,
-                new Dictionary<string, string>
+                new CreateFileOptions
                 {
-                    { "extension", file.Extension }
-                },
-                new Dictionary<string, string>
-                {
-                    { "factor", "1,2" }
-                },
-                useQueueAsync
+                    ContentType = Common.CalculateMimeType(file.FullName),
+                    Tags = new Dictionary<string, string>
+                    {
+                        { "extension", file.Extension }
+                    },
+                    Metadata = new Dictionary<string, string>
+                    {
+                        { "factor", "1,2" }
+                    },
+                    UseQueueAsync = useQueueAsync,
+                    Hash = Common.CalculateMD5(file.FullName)
+                }
             );
             Console.WriteLine($"File path:\t{uploader.FileUrl}");
             Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
@@ -199,13 +206,7 @@ namespace TusConsoleApp
         {
             /* Calculate Hash */
             string contentHash;
-            using (var md5 = MD5.Create())
-            {
-                using (var stream = System.IO.File.OpenRead(file.FullName))
-                {
-                    contentHash = Convert.ToBase64String(md5.ComputeHash(stream));
-                }
-            }
+            contentHash = Common.CalculateMD5(file.FullName);
             Console.WriteLine($"Hash:\t\t{contentHash}");
             Console.WriteLine();
 

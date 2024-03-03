@@ -3,7 +3,7 @@ using System;
 
 namespace TusWebApplication.Application.Files.Queries
 {
-    public sealed class DownloadFileQuery : IRequest<Microsoft.Extensions.FileProviders.IFileInfo>
+    public sealed class DownloadFileQuery : IRequest<TusWebApplication.AzureBlobProvider.IDownloadableFileInfo>
     {
 
         public sealed class RequestParameters

@@ -1,9 +1,7 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
-using qckdev.AspNetCore.Authentication.JwtBearer;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Commands;
@@ -45,6 +43,8 @@ namespace TusWebApplication.Application.Files.Handlers
                     Container = request.Container,
                     FileName = request.Body.FileName,
                     Blob = request.Body.Blob,
+                    ContentType = request.Body.ContentType,
+                    ContentLanguage = request.Body.ContentLanguage,
                     Replace = request.Body.Replace,
                     Size = request.Body.Size,
                     Hash = request.Body.Hash,

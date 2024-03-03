@@ -12,6 +12,19 @@ namespace TusWebApplication.TusAzure.Authentication
 {
     static class TusAuthenticationHelper
     {
+
+        const string CLAIMS_CONTAINER = "container";
+        const string CLAIMS_FILENAME = "file-name";
+        const string CLAIMS_BLOB = "blob";
+        const string CLAIMS_CONTENTTYPE = "content-type";
+        const string CLAIMS_CONTENTLANGUAGE = "content-language";
+        const string CLAIMS_REPLACE = "replace";
+        const string CLAIMS_SIZE = "size";
+        const string CLAIMS_HASH = "hash";
+        const string CLAIMS_USEASYNC = "use-async";
+        const string CLAIMS_EXPIRED = "expired";
+
+
         public static async Task<System.Security.Claims.ClaimsPrincipal?> GetUser(HttpContext context, string schemaName)
         {
             var authenticationResult = await context.AuthenticateAsync(schemaName);
@@ -52,17 +65,25 @@ namespace TusWebApplication.TusAzure.Authentication
 
         public static IEnumerable<System.Security.Claims.Claim> CreateClaims(UploadProperties properties)
         {
+            // Mandatory claims.
             var claims = new List<System.Security.Claims.Claim>
             {
-                new System.Security.Claims.Claim("container", properties.Container),
-                new System.Security.Claims.Claim("file-name", properties.FileName),
-                new System.Security.Claims.Claim("blob", properties.Blob ?? ""),
-                new System.Security.Claims.Claim("replace", properties.Replace.ToString()),
-                new System.Security.Claims.Claim("size", properties.Size.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-                new System.Security.Claims.Claim("hash", properties.Hash ?? ""),
-                new System.Security.Claims.Claim("use-async", properties.UseQueueAsync.ToString()),
-                new System.Security.Claims.Claim("expired", properties.FirstRequestExpired.ToString("O", System.Globalization.CultureInfo.InvariantCulture))
+                new System.Security.Claims.Claim(CLAIMS_CONTAINER, properties.Container),
+                new System.Security.Claims.Claim(CLAIMS_FILENAME, properties.FileName),
+                new System.Security.Claims.Claim(CLAIMS_BLOB, properties.Blob ?? ""),
+                new System.Security.Claims.Claim(CLAIMS_CONTENTTYPE, properties.ContentType ?? ""),
+                new System.Security.Claims.Claim(CLAIMS_REPLACE, properties.Replace.ToString()),
+                new System.Security.Claims.Claim(CLAIMS_SIZE, properties.Size.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                new System.Security.Claims.Claim(CLAIMS_HASH, properties.Hash ?? ""),
+                new System.Security.Claims.Claim(CLAIMS_USEASYNC, properties.UseQueueAsync.ToString()),
+                new System.Security.Claims.Claim(CLAIMS_EXPIRED, properties.FirstRequestExpired.ToString("O", System.Globalization.CultureInfo.InvariantCulture))
             };
+
+            // Optional claims.
+            if (properties.ContentLanguage != null)
+            {
+                claims.Add(new System.Security.Claims.Claim(CLAIMS_CONTENTLANGUAGE, properties.ContentLanguage));
+            }
             return claims;
         }
 
@@ -70,14 +91,16 @@ namespace TusWebApplication.TusAzure.Authentication
         {
             var properties = new UploadProperties
             {
-                Container = claims.Single(x => x.Type == "container").Value,
-                FileName = claims.Single(x => x.Type == "file-name").Value,
-                Blob = claims.Single(x => x.Type == "blob").Value,
-                Replace = bool.Parse(claims.Single(x => x.Type == "replace").Value),
-                Size = long.Parse(claims.Single(x => x.Type == "size").Value, System.Globalization.CultureInfo.InvariantCulture),
-                Hash = claims.Single(x => x.Type == "hash").Value,
-                UseQueueAsync = bool.Parse(claims.Single(x => x.Type == "use-async").Value),
-                FirstRequestExpired = DateTimeOffset.Parse(claims.Single(x => x.Type == "expired").Value, System.Globalization.CultureInfo.InvariantCulture)
+                Container = claims.Single(x => x.Type == CLAIMS_CONTAINER).Value,
+                FileName = claims.Single(x => x.Type == CLAIMS_FILENAME).Value,
+                Blob = claims.Single(x => x.Type == CLAIMS_BLOB).Value,
+                ContentType = claims.Single(x => x.Type == CLAIMS_CONTENTTYPE).Value,
+                ContentLanguage = claims.SingleOrDefault(x => x.Type == CLAIMS_CONTENTLANGUAGE)?.Value,
+                Replace = bool.Parse(claims.Single(x => x.Type == CLAIMS_REPLACE).Value),
+                Size = long.Parse(claims.Single(x => x.Type == CLAIMS_SIZE).Value, System.Globalization.CultureInfo.InvariantCulture),
+                Hash = claims.Single(x => x.Type == CLAIMS_HASH).Value,
+                UseQueueAsync = bool.Parse(claims.Single(x => x.Type == CLAIMS_USEASYNC).Value),
+                FirstRequestExpired = DateTimeOffset.Parse(claims.Single(x => x.Type == CLAIMS_EXPIRED).Value, System.Globalization.CultureInfo.InvariantCulture)
             };
             return properties;
         }

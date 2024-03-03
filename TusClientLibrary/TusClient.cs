@@ -32,6 +32,7 @@ namespace TusClientLibrary
             this.Credentials = credentials;
         }
 
+
         /// <summary>
         /// Creates a blob file and returns a <see cref="TusUploader"/> object to upload its content.
         /// </summary>
@@ -40,18 +41,15 @@ namespace TusClientLibrary
         /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
         /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
         /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
-        /// <param name="tags">Optional. A list of tags added to the blob. Tags can be used for filtering in the blob.</param>
-        /// <param name="metadata">Optional. A list of metadatas added to the blob.</param>
-        /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetails(string)"./></param>
+        /// <param name="options">Optional. Additional options for the file.</param>
         /// <returns>An <see cref="TusUploader"/> object to upload the content.</returns>
         public TusUploader CreateFile(
             FileInfo file,
             string storeName, string containerName,
             string blobName = null, bool replace = false,
-            IDictionary<string, string> tags = null, IDictionary<string, string> metadata = null,
-            bool useQueueAsync = false)
+            CreateFileOptions options = null)
         {
-            return CreateFile(storeName, containerName, file.Name, file.Length, blobName, replace, tags, metadata, useQueueAsync);
+            return CreateFile(storeName, containerName, file.Name, file.Length, blobName, replace, options);
         }
 
         /// <summary>
@@ -63,16 +61,13 @@ namespace TusClientLibrary
         /// <param name="fileSize">Lenght of the <paramref name="fileName"/>.</param>
         /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
         /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
-        /// <param name="tags">Optional. A list of tags added to the blob. Tags can be used for filtering in the blob.</param>
-        /// <param name="metadata">Optional. A list of metadatas added to the blob.</param>
-        /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetails(string)"./></param>
+        /// <param name="options">Optional. Additional options for the file.</param>
         /// <returns>An <see cref="TusUploader"/> object to upload the content.</returns>
         public TusUploader CreateFile(
             string storeName, string containerName,
             string fileName, long fileSize,
             string blobName = null, bool replace = false,
-            IDictionary<string, string> tags = null, IDictionary<string, string> metadata = null,
-            bool useQueueAsync = false, string hash = null)
+            CreateFileOptions options = null)
         {
             var tusClient = new TusDotNetClient.TusClient();
             UploadToken uploadToken;
@@ -81,7 +76,7 @@ namespace TusClientLibrary
             Authorize();
 
             /* Create upload-token */
-            uploadToken = RequestUpload(storeName, containerName, fileName, fileSize, blobName, replace, useQueueAsync, hash);
+            uploadToken = RequestUpload(storeName, containerName, fileName, fileSize, blobName, replace, options);
             tusClient.ApplyAuthorization(uploadToken.AccessToken);
 
             /* Create blob */
@@ -94,7 +89,7 @@ namespace TusClientLibrary
                 fileUrl = tusClient.CreateAsync(
                     uri.OriginalString,
                     fileSize,
-                    TusHelper.CreateMedatada(tags, metadata)
+                    TusHelper.CreateMedatada(options?.Tags, options?.Metadata)
                 ).Result;
                 return new TusUploader(this.BaseAddress, tusClient, uploadToken, fileUrl);
             }
@@ -115,13 +110,13 @@ namespace TusClientLibrary
         /// <param name="fileSize">Lenght of the <paramref name="fileName"/>.</param>
         /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
         /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
-        /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetails(string)"./></param>
+        /// <param name="options">Optional. Additional options for the file.</param>
         /// <returns>A <see cref="UploadToken"/> with the token necessary to upload a new file.</returns>
         public UploadToken RequestUpload(
             string storeName, string containerName,
             string fileName, long fileSize,
             string blobName = null, bool replace = false,
-            bool useQueueAsync = false, string hash = null)
+            RequestUploadOptions options = null)
         {
             UploadToken uploadToken;
 
@@ -135,8 +130,10 @@ namespace TusClientLibrary
                 blob = blobName,
                 replace,
                 size = fileSize,
-                hash,
-                useQueueAsync
+                contentType = options?.ContentType,
+                contentLanguage = options?.ContentLanguage,
+                options?.Hash,
+                options?.UseQueueAsync
             });
             return uploadToken;
         }

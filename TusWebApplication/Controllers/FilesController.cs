@@ -32,7 +32,7 @@ namespace TusWebApplication.Controllers
                 Parameters = parameters
             });
 
-            return File(fileInfo.CreateReadStream(), "application/octet-stream", fileInfo.Name);
+            return File(fileInfo.CreateReadStream(), fileInfo.ContentType, fileInfo.Name);
         }
 
         /// <summary>

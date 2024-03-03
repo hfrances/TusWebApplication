@@ -25,6 +25,16 @@ namespace TusWebApplication.Application.Files.Commands
             public string? Blob { get; set; }
 
             /// <summary>
+            /// The MIME content type of the blob.
+            /// </summary>
+            public string? ContentType { get; set; }
+
+            /// <summary>
+            /// Specifies the natural languages used by this resource.
+            /// </summary>
+            public string? ContentLanguage { get; set; }
+
+            /// <summary>
             /// If true, it will try to replace blob with id set in <see cref="Blob"/> property. 
             /// When false, if <see cref="Blob"/> property is not null and it already exists. It throws an exception when it tries to save the file.
             /// </summary>
@@ -50,12 +60,12 @@ namespace TusWebApplication.Application.Files.Commands
         /// Store name
         /// </summary>
         public string StoreName { get; set; } = string.Empty;
-        
+
         /// <summary>
         /// Container name
         /// </summary>
         public string Container { get; set; } = string.Empty;
-               
+
         public CommandBody Body { get; set; } = new CommandBody();
 
     }
