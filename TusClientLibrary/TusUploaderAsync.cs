@@ -50,11 +50,11 @@ namespace TusClientLibrary
         /// <summary>
         /// Uploads the specified file using a request upload token.
         /// </summary>
-        /// <param name="fileStream"><see cref="System.IO.FileStream"/> of the file to upload.</param>
+        /// <param name="fileStream"><see cref="System.IO.Stream"/> of the file to upload.</param>
         /// <param name="chunkSize">Size (in MB) of the chunks to send.</param>
         /// <param name="progressed">Callback to report upload progress.</param>
         public Task UploadAsync(
-            FileStream fileStream,
+            Stream fileStream,
             double chunkSize = 5D,
             ProgressedDelegate progressed = null)
         {
@@ -115,12 +115,12 @@ namespace TusClientLibrary
         /// </summary>
         /// <param name="fileUrl">Url of the file to upload. Use <seealso cref="RequestUpload"/> to get one.</param>
         /// <param name="requestToken">Request token of the file to upload. Use <seealso cref="RequestUpload"/> to get one.</param>
-        /// <param name="fileStream"><see cref="System.IO.FileStream"/> of the file to upload.</param>
+        /// <param name="fileStream"><see cref="System.IO.Stream"/> of the file to upload.</param>
         /// <param name="chunkSize">Size (in MB) of the chunks to send.</param>
         /// <param name="progressed">Callback to report upload progress.</param>
         public static Task UploadAsync(
             string fileUrl, string requestToken,
-            FileStream fileStream,
+            Stream fileStream,
             double chunkSize = 5D,
             ProgressedDelegate progressed = null)
         {
