@@ -9,6 +9,10 @@ namespace TusWebApplication.Application.Files.Queries
         public sealed class RequestParameters
         {
             /// <summary>
+            /// Sends Content-Disposition "inline" when true, or "attachment" otherwise (default true).
+            /// </summary>
+            public bool Inline { get; set; } = true;
+            /// <summary>
             /// Gets or sets the specific version of the blob.
             /// </summary>
             public string? VersionId { get; set; }

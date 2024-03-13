@@ -14,10 +14,17 @@ namespace TusWebApplication.Controllers
     public class AuthController : Base.ApiControllerBase
     {
 
+        /// <summary>
+        /// Generates an authentication token bearer that is necessary for some protected operations.
+        /// </summary>
+        /// <param name="request"></param>
         [HttpPost, AllowAnonymous]
         public Task<TokenDto> Login([FromBody] LoginCommand request)
             => Send(request);
 
+        /// <summary>
+        /// Retrieves the information about an authorized token bearer.
+        /// </summary>
         [HttpGet]
         public Task<LoginDto> Login()
             => Send(new GetUserNameQuery());

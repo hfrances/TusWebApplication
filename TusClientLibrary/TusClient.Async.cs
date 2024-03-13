@@ -134,6 +134,7 @@ namespace TusClientLibrary
             {
                 queryParameters.Remove("versionId");
             }
+            // Build Uri.
             requestUri = new UriBuilder(fileUri.GetLeftPart(UriPartial.Path))
             {
                 Query = HttpUtility.BuildQueryString(queryParameters)
@@ -145,33 +146,50 @@ namespace TusClientLibrary
         /// Returns information about an specific blob.
         /// </summary>
         /// <param name="fileUrl">The file url. Url can contains the file version (https://..../container/blobname?versionId=xxxxxxx).</param>
-        /// <param name="loadVersions">Optional. Sets if must load all versions. It can increase response time.</param>
+        /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
+        /// <param name="inline">Optional. When is true, content is presented "inline" otherwise it is presented as an "attachment".</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
-        public async Task<FileDetails> GetFileDetailsAsync(string fileUrl, string versionId, bool loadVersions = false)
+        public async Task<FileDetails> GetFileDetailsAsync(string fileUrl, string versionId, bool includeVersions = false)
         {
             FileDetails result;
             var fileUri = new Uri(fileUrl);
+            var queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
             UriBuilder requestUri;
-            IDictionary<string, string> queryParameters;
 
-            // Replaces "versionId" for the specified in the parameter (if it is in fileUrl, it will be replaced or removed).
-            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
-            queryParameters["versionId"] = versionId;
-            queryParameters["loadVersions"] = loadVersions.ToString();
+            // Replaces "versionId" for the specified in the parameter (if it is in the fileUrl, it will be replaced or removed).
+            if (versionId != null)
+            {
+                queryParameters["versionId"] = versionId;
+            }
+            queryParameters["loadVersions"] = includeVersions.ToString();
             requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/details")
             {
                 Query = HttpUtility.BuildQueryString(queryParameters)
             };
 
-            // 
+            // Request.
             Authorize();
             result = await InnerHttpClient.FetchAsync<FileDetails>(HttpMethod.Get, requestUri.Uri.ToString());
             return result;
         }
 
+        /// <summary>
+        /// Returns an url that includes a temporal shared access signature.
+        /// </summary>
+        /// <param name="fileUrl">The original url.</param>
+        /// <param name="expiresOn">The time during which the URL will be available.</param>
+        /// <returns>An url that includes a temparl shared access signarute.</returns>
         public async Task<string> GenerateSasUrlAsync(string fileUrl, TimeSpan expiresOn)
+            => (await GenerateSasUrlAsync(new Uri(fileUrl), expiresOn)).ToString();
+
+        /// <summary>
+        /// Returns an url that includes a temporal shared access signature.
+        /// </summary>
+        /// <param name="fileUrl">The original url.</param>
+        /// <param name="expiresOn">The time during which the URL will be available.</param>
+        /// <returns>An url that includes a temparl shared access signarute.</returns>
+        public async Task<Uri> GenerateSasUrlAsync(Uri fileUri, TimeSpan expiresOn)
         {
-            var fileUri = new Uri(fileUrl);
             UriBuilder requestUri;
             UriBuilder result;
             IDictionary<string, string> queryParameters, queryParametersSas;
@@ -190,13 +208,13 @@ namespace TusClientLibrary
             }));
             foreach (var parameter in queryParametersSas)
             {
-                queryParameters.Add(parameter.Key, parameter.Value);
+                queryParameters[parameter.Key] = parameter.Value;
             }
-            result = new UriBuilder(fileUrl)
+            result = new UriBuilder(fileUri)
             {
                 Query = HttpUtility.BuildQueryString(queryParameters)
             };
-            return result.ToString();
+            return result.Uri;
         }
 
         /// <summary>

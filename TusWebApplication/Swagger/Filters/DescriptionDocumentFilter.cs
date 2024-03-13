@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace TusWebApplication.Swagger
+namespace TusWebApplication.Swagger.Filters
 {
     sealed class DescriptionDocumentFilter : IDocumentFilter
     {

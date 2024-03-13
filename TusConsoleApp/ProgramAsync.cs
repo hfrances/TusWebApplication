@@ -227,10 +227,14 @@ namespace TusConsoleApp
             Console.WriteLine();
 
             /* Generate SAS */
-            string sasUrl;
-            sasUrl = await client.GenerateSasUrlAsync(fileUrl, TimeSpan.FromMinutes(10));
+            Uri sasUri, sasUriInline, sasUriAttachment;
+            sasUri = await client.GenerateSasUrlAsync(new Uri(fileUrl), TimeSpan.FromMinutes(10));
             Console.WriteLine($"Created on:\t{details.CreatedOn}");
-            Console.WriteLine($"Url SAS:\t{sasUrl}");
+            Console.WriteLine($"Url SAS:\t{sasUri}");
+            sasUriInline = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "true" } });
+            Console.WriteLine($"        \t{sasUriInline}");
+            sasUriAttachment = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "false" } });
+            Console.WriteLine($"        \t{sasUriAttachment}");
 
             /* Generate SAS of previous version (if exists) */
             var previousVersion = details.Versions?.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);

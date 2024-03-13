@@ -6,9 +6,18 @@ using System.Threading.Tasks;
 
 namespace TusClientLibrary
 {
-    static class HttpUtility
+
+    /// <summary>
+    /// Provides methods for HTTP requests.
+    /// </summary>
+    public static class HttpUtility
     {
 
+        /// <summary>
+        /// Extracts elements from a uri query string.
+        /// </summary>
+        /// <param name="query">Value or the query string.</param>
+        /// <returns>A dictionary with all elements in the query.</returns>
         public static IDictionary<string, string> ParseQueryString(string query)
         {
             IDictionary<string, string> result;
@@ -42,6 +51,11 @@ namespace TusClientLibrary
             return result;
         }
 
+        /// <summary>
+        /// Generates an uri query string from a dictionary.
+        /// </summary>
+        /// <param name="query">Dictionary with the keys and its values..</param>
+        /// <returns>An string to use in a uri.</returns>
         public static string BuildQueryString(IDictionary<string, string> queryParameters)
         {
             var keyValuePairs = new List<string>();
@@ -52,6 +66,26 @@ namespace TusClientLibrary
                 keyValuePairs.Add($"{key}={value}");
             }
             return string.Join("&", keyValuePairs);
+        }
+
+        /// <summary>
+        /// Returs an <see cref="Uri"/> that is the same thant the original with the additional query values.
+        /// </summary>
+        /// <param name="uri">Original <see cref="Uri"/></param>
+        /// <param name="values">A <see cref="IDictionary{string, string}"/> with the additinal query values.</param>
+        /// <returns>The same thant the original with the additional query values.</returns>
+        public static Uri WithQueryValues(this Uri uri, IDictionary<string, string> values)
+        {
+            var queryParameters = ParseQueryString(uri.Query);
+
+            foreach (var pair in values)
+            {
+                queryParameters[pair.Key] = pair.Value;
+            }
+            return new UriBuilder(uri.GetLeftPart(UriPartial.Path))
+            {
+                Query = BuildQueryString(queryParameters)
+            }.Uri;
         }
 
     }
