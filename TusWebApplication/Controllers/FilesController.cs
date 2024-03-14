@@ -130,6 +130,22 @@ namespace TusWebApplication.Controllers
                 Body = body
             });
 
+        /// <summary>
+        /// Takes a file from other blob storage and imports it in the specific container.
+        /// Requires an authentication bearer token created with 'auth' controller.
+        /// </summary>
+        /// <param name="store">Store name</param>
+        /// <param name="container">Container name</param>
+        /// <param name="body"></param>
+        [HttpPost("{store}/{container}/import"), Authorize, IpSafeFilter]
+        public Task GenerateSas(string store, string container, [FromBody] ImportFileCommand.CommandBody body)
+            => Send(new ImportFileCommand
+            {
+                StoreName = store,
+                ContainerName = container,
+                Body = body
+            });
+
     }
 
 }

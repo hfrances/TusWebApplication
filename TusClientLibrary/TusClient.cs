@@ -141,12 +141,24 @@ namespace TusClientLibrary
         /// <summary>
         /// Returns information about an specific blob.
         /// </summary>
+        /// <param name="storeName">The name of the store where the file is placed.</param>
+        /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
+        /// <param name="blobName">Name of the blob in the <paramref name="storeName"/>.</param>
+        /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
+        /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
+        public FileDetails GetFileDetails(string storeName, string containerName, string blobName, bool includeVersions = false)
+            => GetFileDetails($"files/{Uri.EscapeDataString(storeName)}/{Uri.EscapeDataString(containerName)}/{Uri.EscapeDataString(blobName)}", includeVersions);
+
+
+        /// <summary>
+        /// Returns information about an specific blob.
+        /// </summary>
         /// <param name="fileUrl">The file url. Url can contains the file version (https://..../container/blobname?versionId=xxxxxxx).</param>
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public FileDetails GetFileDetails(string fileUrl, bool includeVersions = false)
         {
-            var fileUri = new Uri(fileUrl);
+            var fileUri = new Uri(this.BaseAddress, fileUrl);
             UriBuilder requestUri;
             IDictionary<string, string> queryParameters;
             string versionId;
@@ -168,13 +180,24 @@ namespace TusClientLibrary
         /// <summary>
         /// Returns information about an specific blob.
         /// </summary>
+        /// <param name="storeName">The name of the store where the file is placed.</param>
+        /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
+        /// <param name="blobName">Name of the blob in the <paramref name="storeName"/>.</param>
+        /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
+        /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
+        public FileDetails GetFileDetails(string storeName, string containerName, string blobName, string versionId, bool includeVersions = false)
+            => GetFileDetails($"files/{Uri.EscapeDataString(storeName)}/{Uri.EscapeDataString(containerName)}/{Uri.EscapeDataString(blobName)}", versionId, includeVersions);
+
+        /// <summary>
+        /// Returns information about an specific blob.
+        /// </summary>
         /// <param name="fileUrl">The file url. Url can contains the file version (https://..../container/blobname?versionId=xxxxxxx).</param>
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public FileDetails GetFileDetails(string fileUrl, string versionId, bool includeVersions = false)
         {
             FileDetails result;
-            var fileUri = new Uri(fileUrl);
+            var fileUri = new Uri(this.BaseAddress, fileUrl);
             var queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
             UriBuilder requestUri;
 
@@ -273,7 +296,58 @@ namespace TusClientLibrary
             TusUploader.Upload(fileUrl, requestToken, fileStream, chunkSize, progressed);
         }
 
-        private void Authorize()
+        /// <summary>
+        /// Takes an external blob file and imports it in the specific container.
+        /// For more information, see <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/copy-blob">Copy Blob</see>.
+        /// </summary>
+        /// <param name="fileUrl">
+        /// Specifies the <see cref="Uri"/> of the source blob.  The value may
+        /// be a <see cref="Uri" /> of up to 2 KB in length that specifies a
+        /// blob.  A source blob in the same storage account can be
+        /// authenticated via Shared Key.  However, if the source is a blob in
+        /// another account, the source blob must either be public or must be
+        /// authenticated via a shared access signature. If the source blob
+        /// is public, no authentication is required to perform the copy
+        /// operation.
+        ///
+        /// The source object may be a file in the Azure File service.  If the
+        /// source object is a file that is to be copied to a blob, then the
+        /// source file must be authenticated using a shared access signature,
+        /// whether it resides in the same account or in a different account.
+        /// </param>
+        /// <param name="storeName">The name of the store where place the file.</param>
+        /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
+        /// <param name="fileName">The name of the file stored in <paramref name="storeName"/>. This is the name that the file has when it is downloaded. Please do not confuse with the <paramref name="blobName"/>.</param>
+        /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
+        /// <param name="options">Optional. Additional import options.</param>
+        /// <param name="waitForComplete">Optional. When true, this function waits until copy has been finished.</param>
+        public void ImportFile(string fileUrl, string storeName, string containerName, string fileName, string blobName = null, UploadFileOptions options = null, bool waitForComplete = true)
+        {
+            /* Authorize */
+            Authorize();
+
+            /* Create upload-token */
+            try
+            {
+                InnerHttpClient.Fetch<object, TusResponse>(HttpMethod.Post, $"files/{storeName}/{containerName}/import", new
+                {
+                    sourceUrl = fileUrl,
+                    fileName,
+                    targetBlobName = blobName,
+                    contentType = options?.ContentType,
+                    tags = options?.Tags,
+                    metadata = options?.Metadata,
+                    waitForComplete
+                });
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+            }
+        }
+
+
+        void Authorize()
         {
 
             if (this.Credentials != null)

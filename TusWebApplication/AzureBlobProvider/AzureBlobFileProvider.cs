@@ -17,11 +17,16 @@ namespace TusWebApplication.AzureBlobProvider
             this.AzureSettings = azureOptions.Value;
         }
 
+        /// <summary>
+        /// Locate a file at the given path.
+        /// </summary>
+        /// <param name="subpath">Relative path that identifies the file.</param>
+        /// <returns>The file information. Caller must check Exists property.</returns>
         public IDownloadableFileInfo GetFileInfo(string subpath)
         {
-            var url = new Uri(new Uri("http://localhost"), subpath);
-            var blobId = url.AbsolutePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
-            var storageName = blobId.First();
+            var blobPath = AzureBlobFileProvider.SplitUriPath(subpath);
+            var blobQuery = AzureBlobFileProvider.GetUriQuery(subpath);
+            var storageName = blobPath.First();
 
             if (AzureSettings.TryGetValue(storageName, out AzureStorageCredentialSettings? settings))
             {
@@ -29,15 +34,15 @@ namespace TusWebApplication.AzureBlobProvider
                     settings.AccountName,settings.AccountKey
                 );
 
-                if (blobId.Length == 3)
+                if (blobPath.Length == 3)
                 {
-                    var containerName = blobId[1];
-                    var blobName = blobId[2];
+                    var containerName = blobPath[1];
+                    var blobName = blobPath[2];
                     var container = blobService.GetBlobContainerClient(containerName);
 
                     if (container.Exists())
                     {
-                        var query = System.Web.HttpUtility.ParseQueryString(url.Query);
+                        var query = System.Web.HttpUtility.ParseQueryString(blobQuery);
                         var versionId = query.Get("versionId");
                         var blob = container.GetBlockBlobClient(blobName);
 
@@ -49,7 +54,7 @@ namespace TusWebApplication.AzureBlobProvider
                     }
                     else
                     {
-                        throw new ArgumentException($"Container with name {containerName} does not exist.");
+                        throw new ArgumentException($"A container with name {containerName} does not exist.");
                     }
                 }
                 else
@@ -63,14 +68,53 @@ namespace TusWebApplication.AzureBlobProvider
             }
         }
 
+        /// <summary>
+        /// Enumerate a directory at the given path, if any.
+        /// </summary>
+        /// <param name="subpath">Relative path that identifies the directory.</param>
+        /// <returns>The file information. Caller must check Exists property.</returns>
+        /// <exception cref="NotImplementedException">
+        /// This method has not been implemented because it is not necessary in this scope.
+        /// </exception>
         public IDirectoryContents GetDirectoryContents(string subpath)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Creates a <see cref="Microsoft.Extensions.Primitives.IChangeToken"/> for the specified filter.
+        /// </summary>
+        /// <param name="filter">
+        /// Filter string used to determine what files or folders to monitor. 
+        /// Example: **/*.cs, *.*, subFolder/**/*.cshtml.
+        /// </param>
+        /// <returns>Returns the contents of the directory.</returns>
+        /// <exception cref="NotImplementedException">
+        /// This method has not been implemented because it is not necessary in this scope.
+        /// </exception>
         public IChangeToken Watch(string filter)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Gets an array with the <paramref name="relativeUri"/> split by character '/'. Removes empty entries.
+        /// </summary>
+        /// <param name="relativeUri"></param>
+        static string[] SplitUriPath(string relativeUri)
+        {
+            var url = new Uri(new Uri("nourl://notarealhost"), relativeUri);
+            return url.AbsolutePath.Split(new char[] { '/' }, StringSplitOptions.RemoveEmptyEntries);
+        }
+
+        /// <summary>
+        /// Gets the query information included in the <paramref name="relativeUri"/>.
+        /// </summary>
+        /// <param name="relativeUri"></param>
+        static string GetUriQuery(string relativeUri)
+        {
+            var url = new Uri(new Uri("nourl://notarealhost"), relativeUri);
+            return url.Query;
         }
     }
 }
