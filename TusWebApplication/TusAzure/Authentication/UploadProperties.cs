@@ -7,7 +7,8 @@ namespace TusWebApplication.TusAzure.Authentication
 
         public string Container { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
-        public string? Blob { get; set; }
+        public string Blob { get; set; } = string.Empty;
+        public string BlobId { get; set; } = string.Empty;
         public string? ContentType { get; set; }
         public string? ContentLanguage { get; set; }
         public bool Replace { get; set; }

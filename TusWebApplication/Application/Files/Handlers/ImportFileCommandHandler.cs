@@ -8,11 +8,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Commands;
+using TusWebApplication.Application.Files.Dtos;
 
 namespace TusWebApplication.Application.Files.Handlers
 {
 
-    sealed class ImportFileCommandHandler : IRequestHandler<ImportFileCommand>
+    sealed class ImportFileCommandHandler : IRequestHandler<ImportFileCommand, ImportDto>
     {
 
         AzureBlobProvider.AzureStorageCredentialsSettings AzureSettings { get; }
@@ -22,7 +23,7 @@ namespace TusWebApplication.Application.Files.Handlers
             this.AzureSettings = azureOptions.Value;
         }
 
-        public async Task<Unit> Handle(ImportFileCommand request, CancellationToken cancellationToken)
+        public async Task<ImportDto> Handle(ImportFileCommand request, CancellationToken cancellationToken)
         {
 
             try
@@ -75,6 +76,8 @@ namespace TusWebApplication.Application.Files.Handlers
                                 }
                                 else
                                 {
+                                    BlobProperties properties = await blob.GetPropertiesAsync();
+
                                     var task =
                                         copy.WaitForCompletionAsync(cancellationToken)
                                             .AsTask()
@@ -93,7 +96,7 @@ namespace TusWebApplication.Application.Files.Handlers
                                                 {
                                                     Azure.Response<BlobInfo> responseBlob;
                                                     bool metadataModified, tagsModified;
-                                                    var currentMetadata = (await blob.GetPropertiesAsync()).Value.Metadata;
+                                                    var currentMetadata = properties.Metadata;
                                                     var finalMetadata = MergeMetadata(currentMetadata, request.Body.FileName, request.Body.Metadata, out metadataModified);
                                                     var currentTags = (await blob.GetTagsAsync()).Value.Tags;
                                                     var finalTags = MergeTags(currentTags, request.Body.Tags, out tagsModified);
@@ -133,8 +136,13 @@ namespace TusWebApplication.Application.Files.Handlers
                                     {
                                         task.Wait();
                                     }
+                                    return new ImportDto
+                                    {
+                                        StoreName = request.StoreName,
+                                        BlobId = $"{container.Name}/{blob.Name}",
+                                        VersionId = properties.VersionId
+                                    };
                                 }
-                                return Unit.Value; // TODO: Devolver el nuevo nombre.
                             }
                         }
                         else
@@ -161,8 +169,8 @@ namespace TusWebApplication.Application.Files.Handlers
         static IDictionary<string, string> MergeMetadata(IDictionary<string, string> original, string? fileName, IDictionary<string, string>? append, out bool modified)
         {
             IDictionary<string, string> result = original ?? new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            
-            modified  = false;
+
+            modified = false;
             if (append != null)
             {
                 foreach (var item in append)

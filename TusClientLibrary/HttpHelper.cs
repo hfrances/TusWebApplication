@@ -10,7 +10,7 @@ namespace TusClientLibrary
     /// <summary>
     /// Provides methods for HTTP requests.
     /// </summary>
-    public static class HttpUtility
+    public static class HttpHelper
     {
 
         /// <summary>

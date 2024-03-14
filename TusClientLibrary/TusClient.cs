@@ -2,10 +2,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
-using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
-using TusDotNetClient;
 
 namespace TusClientLibrary
 {
@@ -13,6 +11,11 @@ namespace TusClientLibrary
     public sealed partial class TusClient
     {
         public delegate void ProgressedDelegate(long transferred, long total);
+
+        /// <summary>
+        /// The subpath name of the files controller.
+        /// </summary>
+        const string FILES_PATH = "files";
 
         HttpClient InnerHttpClient { get; }
         TusClientCredentials Credentials { get; }
@@ -85,7 +88,7 @@ namespace TusClientLibrary
 
             try
             {
-                uri = new Uri(this.BaseAddress, $"files/{storeName}");
+                uri = new Uri(this.BaseAddress, GetRelativeFileUrl(storeName));
                 fileUrl = tusClient.CreateAsync(
                     uri.OriginalString,
                     fileSize,
@@ -119,23 +122,32 @@ namespace TusClientLibrary
             RequestUploadOptions options = null)
         {
             UploadToken uploadToken;
+            string path;
 
-            /* Authorize */
-            Authorize();
-
-            /* Create upload-token */
-            uploadToken = InnerHttpClient.Fetch<UploadToken>(HttpMethod.Post, $"files/{storeName}/{containerName}/request-upload", new
+            try
             {
-                fileName,
-                blob = blobName,
-                replace,
-                size = fileSize,
-                contentType = options?.ContentType,
-                contentLanguage = options?.ContentLanguage,
-                options?.Hash,
-                options?.UseQueueAsync
-            });
-            return uploadToken;
+                /* Authorize */
+                Authorize();
+
+                /* Create upload-token */
+                path = GetRelativeFileUrl(storeName, containerName, "request-upload");
+                uploadToken = InnerHttpClient.Fetch<UploadToken, TusResponse>(HttpMethod.Post, path, new
+                {
+                    fileName,
+                    blob = blobName,
+                    replace,
+                    size = fileSize,
+                    contentType = options?.ContentType,
+                    contentLanguage = options?.ContentLanguage,
+                    options?.Hash,
+                    options?.UseQueueAsync
+                });
+                return uploadToken;
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+            }
         }
 
         /// <summary>
@@ -147,8 +159,7 @@ namespace TusClientLibrary
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public FileDetails GetFileDetails(string storeName, string containerName, string blobName, bool includeVersions = false)
-            => GetFileDetails($"files/{Uri.EscapeDataString(storeName)}/{Uri.EscapeDataString(containerName)}/{Uri.EscapeDataString(blobName)}", includeVersions);
-
+            => GetFileDetails(GetRelativeFileUrl(storeName, containerName, blobName), includeVersions);
 
         /// <summary>
         /// Returns information about an specific blob.
@@ -164,7 +175,7 @@ namespace TusClientLibrary
             string versionId;
 
             // Extract versionId from the url and pass to the overloaded method.
-            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
             if (queryParameters.TryGetValue("versionId", out versionId))
             {
                 queryParameters.Remove("versionId");
@@ -172,7 +183,7 @@ namespace TusClientLibrary
             // Build Uri.
             requestUri = new UriBuilder(fileUri.GetLeftPart(UriPartial.Path))
             {
-                Query = HttpUtility.BuildQueryString(queryParameters)
+                Query = HttpHelper.BuildQueryString(queryParameters)
             };
             return GetFileDetails(requestUri.Uri.ToString(), versionId, includeVersions);
         }
@@ -186,7 +197,7 @@ namespace TusClientLibrary
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public FileDetails GetFileDetails(string storeName, string containerName, string blobName, string versionId, bool includeVersions = false)
-            => GetFileDetails($"files/{Uri.EscapeDataString(storeName)}/{Uri.EscapeDataString(containerName)}/{Uri.EscapeDataString(blobName)}", versionId, includeVersions);
+            => GetFileDetails(GetRelativeFileUrl(storeName, containerName, blobName), versionId, includeVersions);
 
         /// <summary>
         /// Returns information about an specific blob.
@@ -198,7 +209,7 @@ namespace TusClientLibrary
         {
             FileDetails result;
             var fileUri = new Uri(this.BaseAddress, fileUrl);
-            var queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            var queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
             UriBuilder requestUri;
 
             // Replaces "versionId" for the specified in the parameter (if it is in the fileUrl, it will be replaced or removed).
@@ -209,7 +220,7 @@ namespace TusClientLibrary
             queryParameters["loadVersions"] = includeVersions.ToString();
             requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/details")
             {
-                Query = HttpUtility.BuildQueryString(queryParameters)
+                Query = HttpHelper.BuildQueryString(queryParameters)
             };
 
             // Request.
@@ -246,8 +257,8 @@ namespace TusClientLibrary
             };
 
             // Get URL queries, original and SAS token and merge them for the result.
-            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
-            queryParametersSas = HttpUtility.ParseQueryString(InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.ToString(), new
+            queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
+            queryParametersSas = HttpHelper.ParseQueryString(InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.ToString(), new
             {
                 expiresOn = DateTimeOffset.UtcNow.Add(expiresOn)
             }));
@@ -257,7 +268,7 @@ namespace TusClientLibrary
             }
             result = new UriBuilder(fileUri)
             {
-                Query = HttpUtility.BuildQueryString(queryParameters)
+                Query = HttpHelper.BuildQueryString(queryParameters)
             };
             return result.Uri;
         }
@@ -300,7 +311,7 @@ namespace TusClientLibrary
         /// Takes an external blob file and imports it in the specific container.
         /// For more information, see <see href="https://docs.microsoft.com/en-us/rest/api/storageservices/copy-blob">Copy Blob</see>.
         /// </summary>
-        /// <param name="fileUrl">
+        /// <param name="sourceUrl">
         /// Specifies the <see cref="Uri"/> of the source blob.  The value may
         /// be a <see cref="Uri" /> of up to 2 KB in length that specifies a
         /// blob.  A source blob in the same storage account can be
@@ -321,17 +332,22 @@ namespace TusClientLibrary
         /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
         /// <param name="options">Optional. Additional import options.</param>
         /// <param name="waitForComplete">Optional. When true, this function waits until copy has been finished.</param>
-        public void ImportFile(string fileUrl, string storeName, string containerName, string fileName, string blobName = null, UploadFileOptions options = null, bool waitForComplete = true)
+        public ImportDetails ImportFile(string sourceUrl, string storeName, string containerName, string fileName, string blobName = null, UploadFileOptions options = null, bool waitForComplete = true)
         {
-            /* Authorize */
-            Authorize();
+            ImportDetailsPrivate result;
+            string path;
+            Uri fileUri;
 
-            /* Create upload-token */
             try
             {
-                InnerHttpClient.Fetch<object, TusResponse>(HttpMethod.Post, $"files/{storeName}/{containerName}/import", new
+                /* Authorize */
+                Authorize();
+
+                /* Action */
+                path = GetRelativeFileUrl(storeName, containerName, "import");
+                result = InnerHttpClient.Fetch<ImportDetailsPrivate, TusResponse>(HttpMethod.Post, path, new
                 {
-                    sourceUrl = fileUrl,
+                    sourceUrl = sourceUrl,
                     fileName,
                     targetBlobName = blobName,
                     contentType = options?.ContentType,
@@ -339,6 +355,14 @@ namespace TusClientLibrary
                     metadata = options?.Metadata,
                     waitForComplete
                 });
+                fileUri = new Uri(InnerHttpClient.BaseAddress, GetRelativeFileUrl(result.StoreName, result.BlobId));
+                return new ImportDetails
+                {
+                    StoreName = result.StoreName,
+                    BlobId = result.BlobId,
+                    Version = result.VersionId,
+                    FileUrl = fileUri.ToString(),
+                };
             }
             catch (FetchFailedException<TusResponse> ex)
             {
@@ -373,6 +397,9 @@ namespace TusClientLibrary
 
             return token;
         }
+
+        static string GetRelativeFileUrl(params string[] subpaths)
+            => string.Join("/", Enumerable.Union(new[] { FILES_PATH }, (subpaths ?? Array.Empty<string>())));
 
     }
 }

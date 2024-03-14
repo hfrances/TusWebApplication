@@ -1,5 +1,4 @@
 ﻿using Azure.Storage.Blobs.Models;
-using Azure.Storage.Blobs;
 using MediatR;
 using Microsoft.Extensions.Options;
 using System;
@@ -10,7 +9,6 @@ using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Dtos;
 using TusWebApplication.Application.Files.Queries;
 using TusWebApplication.Application.Files.Helpers;
-using System.ComponentModel;
 
 namespace TusWebApplication.Application.Files.Handlers
 {
@@ -61,14 +59,10 @@ namespace TusWebApplication.Application.Files.Handlers
                         BlobProperties properties;
                         IDictionary<string, string> tags, metadata;
                         IEnumerable<FileVersionDto>? blobVersions = null;
-                        Uri uri;
 
                         properties = (await blob.GetPropertiesAsync(cancellationToken: cancellationToken)).Value;
                         metadata = properties.Metadata.ToDictionary(x => x.Key, x => Uri.UnescapeDataString(x.Value), StringComparer.OrdinalIgnoreCase);
                         tags = (await blob.GetTagsAsync(cancellationToken: cancellationToken)).Value.Tags;
-
-                        // Generar url.
-                        uri = blob.Uri;
 
                         // Obtener versiones.
                         if (request.Parameters != null && request.Parameters.LoadVersions && !string.IsNullOrEmpty(properties.VersionId)) // Se ha pedido la lista de versiones y el blob soporta versionado.
@@ -86,15 +80,18 @@ namespace TusWebApplication.Application.Files.Handlers
                         }
                         return new FileDto
                         {
+                            StoreName = request.StoreName,
                             BlobId = $"{container.Name}/{blob.Name}",
                             Name = metadata.SingleOrDefault(x => x.Key.Equals("filename", StringComparison.OrdinalIgnoreCase)).Value,
-                            Length = properties.ContentLength,
+                            ContentType = properties.ContentType,
+                            ContentLanguage = properties.ContentLanguage,
                             Metadata = metadata,
                             Tags = tags,
-                            Url = uri,
+                            InnerUrl = blob.Uri,
                             Checksum = (properties.ContentHash == null) ?
                                 null :
                                 Convert.ToBase64String(properties.ContentHash),
+                            Length = properties.ContentLength,
                             CreatedOn = properties.CreatedOn,
                             VersionId = properties.VersionId,
                             Versions = blobVersions

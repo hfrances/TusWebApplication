@@ -16,6 +16,7 @@ namespace TusWebApplication.TusAzure.Authentication
         const string CLAIMS_CONTAINER = "container";
         const string CLAIMS_FILENAME = "file-name";
         const string CLAIMS_BLOB = "blob";
+        const string CLAIMS_BLOBID = "blobId";
         const string CLAIMS_CONTENTTYPE = "content-type";
         const string CLAIMS_CONTENTLANGUAGE = "content-language";
         const string CLAIMS_REPLACE = "replace";
@@ -70,7 +71,8 @@ namespace TusWebApplication.TusAzure.Authentication
             {
                 new System.Security.Claims.Claim(CLAIMS_CONTAINER, properties.Container),
                 new System.Security.Claims.Claim(CLAIMS_FILENAME, properties.FileName),
-                new System.Security.Claims.Claim(CLAIMS_BLOB, properties.Blob ?? ""),
+                new System.Security.Claims.Claim(CLAIMS_BLOB, properties.Blob),
+                new System.Security.Claims.Claim(CLAIMS_BLOBID, properties.BlobId),
                 new System.Security.Claims.Claim(CLAIMS_CONTENTTYPE, properties.ContentType ?? ""),
                 new System.Security.Claims.Claim(CLAIMS_REPLACE, properties.Replace.ToString()),
                 new System.Security.Claims.Claim(CLAIMS_SIZE, properties.Size.ToString(System.Globalization.CultureInfo.InvariantCulture)),
@@ -94,6 +96,7 @@ namespace TusWebApplication.TusAzure.Authentication
                 Container = claims.Single(x => x.Type == CLAIMS_CONTAINER).Value,
                 FileName = claims.Single(x => x.Type == CLAIMS_FILENAME).Value,
                 Blob = claims.Single(x => x.Type == CLAIMS_BLOB).Value,
+                BlobId = claims.Single(x => x.Type == CLAIMS_BLOBID).Value,
                 ContentType = claims.Single(x => x.Type == CLAIMS_CONTENTTYPE).Value,
                 ContentLanguage = claims.SingleOrDefault(x => x.Type == CLAIMS_CONTENTLANGUAGE)?.Value,
                 Replace = bool.Parse(claims.Single(x => x.Type == CLAIMS_REPLACE).Value),

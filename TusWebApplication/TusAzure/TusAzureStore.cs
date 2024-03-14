@@ -184,10 +184,10 @@ namespace TusWebApplication.TusAzure
                     // If blobName was not set, create a new automatically.
                     if (string.IsNullOrEmpty(blobName))
                     {
-                        blobName = Guid.NewGuid().ToString();
+                        blobName = Guid.NewGuid().ToString(); // TODO: Se podrá quitar unas versiones más tarde
                     }
                     blob = container.GetBlockBlobClient(blobName);
-                    blobId = $"{blob.BlobContainerName}/{blob.Name}";
+                    blobId = $"{blob.BlobContainerName}/{blob.Name}"; // TODO: Se podrá quitar unas versiones más tarde
 
                     // Check if blob already exists and it can be replaced.
                     if (await blob.ExistsAsync(cancellationToken))

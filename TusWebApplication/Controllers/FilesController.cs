@@ -138,7 +138,7 @@ namespace TusWebApplication.Controllers
         /// <param name="container">Container name</param>
         /// <param name="body"></param>
         [HttpPost("{store}/{container}/import"), Authorize, IpSafeFilter]
-        public Task GenerateSas(string store, string container, [FromBody] ImportFileCommand.CommandBody body)
+        public Task<ImportDto> GenerateSas(string store, string container, [FromBody] ImportFileCommand.CommandBody body)
             => Send(new ImportFileCommand
             {
                 StoreName = store,

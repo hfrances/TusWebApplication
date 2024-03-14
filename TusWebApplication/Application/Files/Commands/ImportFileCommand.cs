@@ -1,10 +1,11 @@
 ﻿using MediatR;
 using System.Collections;
 using System.Collections.Generic;
+using TusWebApplication.Application.Files.Dtos;
 
 namespace TusWebApplication.Application.Files.Commands
 {
-    public sealed class ImportFileCommand : IRequest
+    public sealed class ImportFileCommand : IRequest<ImportDto>
     {
 
         public sealed class CommandBody

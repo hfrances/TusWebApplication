@@ -62,7 +62,7 @@ namespace TusClientLibrary
 
             try
             {
-                uri = new Uri(this.BaseAddress, $"files/{storeName}");
+                uri = new Uri(this.BaseAddress, GetRelativeFileUrl(storeName));
                 fileUrl = await tusClient.CreateAsync(
                     uri.OriginalString,
                     fileSize,
@@ -96,23 +96,32 @@ namespace TusClientLibrary
             RequestUploadOptions options = null)
         {
             UploadToken uploadToken;
+            string path;
 
-            /* Authorize */
-            await AuthorizeAsync();
-
-            /* Create upload-token */
-            uploadToken = await InnerHttpClient.FetchAsync<UploadToken>(HttpMethod.Post, $"files/{storeName}/{containerName}/request-upload", new
+            try
             {
-                fileName,
-                blob = blobName,
-                replace,
-                size = fileSize,
-                contentType = options?.ContentType,
-                contentLanguage = options?.ContentLanguage,
-                options?.Hash,
-                options?.UseQueueAsync
-            });
-            return uploadToken;
+                /* Authorize */
+                await AuthorizeAsync();
+
+                /* Create upload-token */
+                path = GetRelativeFileUrl(storeName, containerName, "request-upload");
+                uploadToken = await InnerHttpClient.FetchAsync<UploadToken, TusResponse>(HttpMethod.Post, path, new
+                {
+                    fileName,
+                    blob = blobName,
+                    replace,
+                    size = fileSize,
+                    contentType = options?.ContentType,
+                    contentLanguage = options?.ContentLanguage,
+                    options?.Hash,
+                    options?.UseQueueAsync
+                });
+                return uploadToken;
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+            }
         }
 
         /// <summary>
@@ -124,7 +133,7 @@ namespace TusClientLibrary
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public Task<FileDetails> GetFileDetailsAsync(string storeName, string containerName, string blobName, bool includeVersions = false)
-            => GetFileDetailsAsync($"files/{Uri.EscapeDataString(storeName)}/{Uri.EscapeDataString(containerName)}/{Uri.EscapeDataString(blobName)}", includeVersions);
+            => GetFileDetailsAsync(GetRelativeFileUrl(storeName, containerName, blobName), includeVersions);
 
         /// <summary>
         /// Returns information about an specific blob.
@@ -140,7 +149,7 @@ namespace TusClientLibrary
             string versionId;
 
             // Extract versionId from the url and pass to the overloaded method.
-            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
             if (queryParameters.TryGetValue("versionId", out versionId))
             {
                 queryParameters.Remove("versionId");
@@ -148,7 +157,7 @@ namespace TusClientLibrary
             // Build Uri.
             requestUri = new UriBuilder(fileUri.GetLeftPart(UriPartial.Path))
             {
-                Query = HttpUtility.BuildQueryString(queryParameters)
+                Query = HttpHelper.BuildQueryString(queryParameters)
             };
             return GetFileDetailsAsync(requestUri.Uri.ToString(), versionId, includeVersions);
         }
@@ -162,7 +171,7 @@ namespace TusClientLibrary
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public Task<FileDetails> GetFileDetailsAsync(string storeName, string containerName, string blobName, string versionId, bool includeVersions = false)
-            => GetFileDetailsAsync($"files/{Uri.EscapeDataString(storeName)}/{Uri.EscapeDataString(containerName)}/{Uri.EscapeDataString(blobName)}", versionId, includeVersions);
+            => GetFileDetailsAsync(GetRelativeFileUrl(storeName, containerName, blobName), versionId, includeVersions);
 
         /// <summary>
         /// Returns information about an specific blob.
@@ -174,7 +183,7 @@ namespace TusClientLibrary
         {
             FileDetails result;
             var fileUri = new Uri(this.BaseAddress, fileUrl);
-            var queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
+            var queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
             UriBuilder requestUri;
 
             // Replaces "versionId" for the specified in the parameter (if it is in the fileUrl, it will be replaced or removed).
@@ -185,7 +194,7 @@ namespace TusClientLibrary
             queryParameters["loadVersions"] = includeVersions.ToString();
             requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/details")
             {
-                Query = HttpUtility.BuildQueryString(queryParameters)
+                Query = HttpHelper.BuildQueryString(queryParameters)
             };
 
             // Request.
@@ -222,8 +231,8 @@ namespace TusClientLibrary
             };
 
             // Get URL queries, original and SAS token and merge them for the result.
-            queryParameters = HttpUtility.ParseQueryString(fileUri.Query);
-            queryParametersSas = HttpUtility.ParseQueryString(await InnerHttpClient.FetchAsync<string>(HttpMethod.Post, requestUri.Uri.OriginalString, new
+            queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
+            queryParametersSas = HttpHelper.ParseQueryString(await InnerHttpClient.FetchAsync<string>(HttpMethod.Post, requestUri.Uri.OriginalString, new
             {
                 expiresOn = DateTimeOffset.Now.Add(expiresOn)
             }));
@@ -233,7 +242,7 @@ namespace TusClientLibrary
             }
             result = new UriBuilder(fileUri)
             {
-                Query = HttpUtility.BuildQueryString(queryParameters)
+                Query = HttpHelper.BuildQueryString(queryParameters)
             };
             return result.Uri;
         }
@@ -299,20 +308,31 @@ namespace TusClientLibrary
         /// <param name="waitForComplete">Optional. When true, this function waits until copy has been finished.</param>
         public async Task ImportFileAsync(string fileUrl, string storeName, string containerName, string fileName, string blobName = null, UploadFileOptions options = null, bool waitForComplete = true)
         {
-            /* Authorize */
-            await AuthorizeAsync();
+            ImportDetailsPrivate result;
+            string path;
 
-            /* Create upload-token */
-            await InnerHttpClient.FetchAsync(HttpMethod.Post, $"files/{storeName}/{containerName}/import", new
+            try
             {
-                sourceUrl = fileUrl,
-                fileName,
-                targetBlobName = blobName,
-                contentType = options?.ContentType,
-                tags = options?.Tags,
-                metadata = options?.Metadata,
-                waitForComplete
-            });
+                /* Authorize */
+                await AuthorizeAsync();
+
+                /* Action */
+                path = GetRelativeFileUrl(storeName, containerName, "import");
+                result = await InnerHttpClient.FetchAsync<ImportDetailsPrivate, TusResponse>(HttpMethod.Post, path, new
+                {
+                    sourceUrl = fileUrl,
+                    fileName,
+                    targetBlobName = blobName,
+                    contentType = options?.ContentType,
+                    tags = options?.Tags,
+                    metadata = options?.Metadata,
+                    waitForComplete
+                });
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+            }
         }
 
 
@@ -342,7 +362,6 @@ namespace TusClientLibrary
 
             return token;
         }
-
 
     }
 }

@@ -24,8 +24,8 @@ namespace TusWebApplication.AzureBlobProvider
         /// <returns>The file information. Caller must check Exists property.</returns>
         public IDownloadableFileInfo GetFileInfo(string subpath)
         {
-            var blobPath = AzureBlobFileProvider.SplitUriPath(subpath);
-            var blobQuery = AzureBlobFileProvider.GetUriQuery(subpath);
+            var blobPath = SplitUriPath(subpath);
+            var blobQuery = GetUriQuery(subpath);
             var storageName = blobPath.First();
 
             if (AzureSettings.TryGetValue(storageName, out AzureStorageCredentialSettings? settings))

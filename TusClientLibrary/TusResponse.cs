@@ -13,6 +13,7 @@ namespace TusClientLibrary
         {
 
             public string Message { get; set; }
+            public TusError InnerError { get; set; }
 
         }
 
