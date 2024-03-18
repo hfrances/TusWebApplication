@@ -146,6 +146,24 @@ namespace TusWebApplication.Controllers
                 Body = body
             });
 
+        /// <summary>
+        /// Deletes the specific blob.
+        /// Requires an authentication bearer token created with 'auth' controller.
+        /// </summary>
+        /// <param name="store">Store name</param>
+        /// <param name="container">Container name</param>
+        /// <param name="blob">Blob name</param>
+        /// <param name="parameters"></param>
+        [HttpDelete("{store}/{container}/{blob}"), Authorize, IpSafeFilter]
+        public Task GenerateSas(string store, string container, string blob, [FromQuery] DeleteFileCommand.RequestParameters parameters)
+            => Send(new DeleteFileCommand
+            {
+                StoreName = store,
+                ContainerName = container,
+                BlobName = blob,
+                Parameters = parameters
+            });
+
     }
 
 }

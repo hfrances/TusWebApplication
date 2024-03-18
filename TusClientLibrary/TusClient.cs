@@ -170,22 +170,11 @@ namespace TusClientLibrary
         public FileDetails GetFileDetails(string fileUrl, bool includeVersions = false)
         {
             var fileUri = new Uri(this.BaseAddress, fileUrl);
-            UriBuilder requestUri;
-            IDictionary<string, string> queryParameters;
+            Uri requestUri;
             string versionId;
 
-            // Extract versionId from the url and pass to the overloaded method.
-            queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
-            if (queryParameters.TryGetValue("versionId", out versionId))
-            {
-                queryParameters.Remove("versionId");
-            }
-            // Build Uri.
-            requestUri = new UriBuilder(fileUri.GetLeftPart(UriPartial.Path))
-            {
-                Query = HttpHelper.BuildQueryString(queryParameters)
-            };
-            return GetFileDetails(requestUri.Uri.ToString(), versionId, includeVersions);
+            requestUri = ExtractParametersFromUri(fileUri, out versionId, out _);
+            return GetFileDetails(requestUri.ToString(), versionId, includeVersions);
         }
 
         /// <summary>
@@ -209,23 +198,11 @@ namespace TusClientLibrary
         {
             FileDetails result;
             var fileUri = new Uri(this.BaseAddress, fileUrl);
-            var queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
-            UriBuilder requestUri;
-
-            // Replaces "versionId" for the specified in the parameter (if it is in the fileUrl, it will be replaced or removed).
-            if (versionId != null)
-            {
-                queryParameters["versionId"] = versionId;
-            }
-            queryParameters["loadVersions"] = includeVersions.ToString();
-            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/details")
-            {
-                Query = HttpHelper.BuildQueryString(queryParameters)
-            };
+            Uri requestUri = GetBlobUriWithVersion(fileUri, "details", versionId, includeVersions);
 
             // Request.
             Authorize();
-            result = InnerHttpClient.Fetch<FileDetails>(HttpMethod.Get, requestUri.Uri.ToString());
+            result = InnerHttpClient.Fetch<FileDetails>(HttpMethod.Get, requestUri.ToString());
             return result;
         }
 
@@ -241,7 +218,7 @@ namespace TusClientLibrary
         /// <summary>
         /// Returns an url that includes a temporal shared access signature.
         /// </summary>
-        /// <param name="fileUrl">The original url.</param>
+        /// <param name="fileUri">The original url.</param>
         /// <param name="expiresOn">The time during which the URL will be available.</param>
         /// <returns>An url that includes a temparl shared access signarute.</returns>
         public Uri GenerateSasUrl(Uri fileUri, TimeSpan expiresOn)
@@ -249,6 +226,7 @@ namespace TusClientLibrary
             UriBuilder requestUri;
             UriBuilder result;
             IDictionary<string, string> queryParameters, queryParametersSas;
+            string tokenSas;
 
             Authorize();
             requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/generateSas")
@@ -258,10 +236,11 @@ namespace TusClientLibrary
 
             // Get URL queries, original and SAS token and merge them for the result.
             queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
-            queryParametersSas = HttpHelper.ParseQueryString(InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.ToString(), new
+            tokenSas = InnerHttpClient.Fetch<string>(HttpMethod.Post, requestUri.Uri.ToString(), new
             {
                 expiresOn = DateTimeOffset.UtcNow.Add(expiresOn)
-            }));
+            });
+            queryParametersSas = HttpHelper.ParseQueryString(tokenSas);
             foreach (var parameter in queryParametersSas)
             {
                 queryParameters[parameter.Key] = parameter.Value;
@@ -347,7 +326,7 @@ namespace TusClientLibrary
                 path = GetRelativeFileUrl(storeName, containerName, "import");
                 result = InnerHttpClient.Fetch<ImportDetailsPrivate, TusResponse>(HttpMethod.Post, path, new
                 {
-                    sourceUrl = sourceUrl,
+                    sourceUrl,
                     fileName,
                     targetBlobName = blobName,
                     contentType = options?.ContentType,
@@ -363,6 +342,36 @@ namespace TusClientLibrary
                     Version = result.VersionId,
                     FileUrl = fileUri.ToString(),
                 };
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+            }
+        }
+
+        /// <summary>
+        /// Deletes the specific blob specific blob.
+        /// </summary>
+        /// <param name="storeName">The name of the store where the file is placed.</param>
+        /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
+        /// <param name="blobName">Name of the blob in the <paramref name="storeName"/>.</param>
+        public void DeleteBlob(string storeName, string containerName, string blobName, string versionId = null)
+            => DeleteBlob(GetRelativeFileUrl(storeName, containerName, blobName), versionId);
+
+        /// <summary>
+        /// Deletes the specific blob specific blob.
+        /// </summary>
+        /// <param name="fileUrl">The file url. Url can contains the file version (https://..../container/blobname?versionId=xxxxxxx).</param>
+        public void DeleteBlob(string fileUrl, string versionId = null)
+        {
+            try
+            {
+                var fileUri = new Uri(this.BaseAddress, fileUrl);
+                var requestUri = GetBlobUriWithVersion(fileUri, versionId);
+
+                // Request.
+                Authorize();
+                InnerHttpClient.Fetch<object, TusResponse>(HttpMethod.Delete, requestUri.ToString());
             }
             catch (FetchFailedException<TusResponse> ex)
             {
@@ -400,6 +409,74 @@ namespace TusClientLibrary
 
         static string GetRelativeFileUrl(params string[] subpaths)
             => string.Join("/", Enumerable.Union(new[] { FILES_PATH }, (subpaths ?? Array.Empty<string>())));
+
+        static Uri GetBlobUriWithVersion(Uri fileUri, string versionId, bool? includeVersions = null)
+            => GetBlobUriWithVersion(fileUri, null, versionId, includeVersions);
+
+        static Uri GetBlobUriWithVersion(Uri fileUri, string subpath, string versionId, bool? includeVersions = null)
+        {
+            var queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
+            UriBuilder requestUri;
+
+            // Replaces "versionId" for the specified in the parameter (if it is in the fileUrl, it will be replaced or removed).
+            if (versionId != null)
+            {
+                queryParameters["versionId"] = versionId;
+            }
+            if (includeVersions != null)
+            {
+                queryParameters["loadVersions"] = includeVersions.ToString();
+            }
+
+            // Build uri.
+            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}")
+            {
+                Query = HttpHelper.BuildQueryString(queryParameters)
+            };
+            if (!string.IsNullOrWhiteSpace(subpath))
+            {
+                requestUri.Path += $"/{subpath}";
+            }
+            return requestUri.Uri;
+        }
+
+        static Uri ExtractParametersFromUri(Uri fileUri, out string versionId, out bool? includeVersions)
+            => ExtractParametersFromUri(fileUri, null, out versionId, out includeVersions);
+
+        static Uri ExtractParametersFromUri(Uri fileUri, string subpath, out string versionId, out bool? includeVersions)
+        {
+            UriBuilder requestUri;
+            IDictionary<string, string> queryParameters;
+
+            // Extract versionId from the url and pass to the overloaded method.
+            queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
+            if (queryParameters.TryGetValue("versionId", out versionId))
+            {
+                queryParameters.Remove("versionId");
+            }
+
+            // Extract includeVersions from the url and pass to the overloaded method.
+            includeVersions = null;
+            if (queryParameters.TryGetValue("includeVersions", out string includeVersionsString))
+            {
+                queryParameters.Remove("includeVersions");
+                if (bool.TryParse(includeVersionsString, out bool includeVersionsBool))
+                {
+                    includeVersions = includeVersionsBool;
+                }
+            }
+
+            // Build Uri.
+            requestUri = new UriBuilder(fileUri.GetLeftPart(UriPartial.Path))
+            {
+                Query = HttpHelper.BuildQueryString(queryParameters)
+            };
+            if (!string.IsNullOrWhiteSpace(subpath))
+            {
+                requestUri.Path += $"/{subpath}";
+            }
+            return requestUri.Uri;
+        }
 
     }
 }

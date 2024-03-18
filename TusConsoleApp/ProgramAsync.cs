@@ -30,6 +30,7 @@ namespace TusConsoleApp
                 var replace = commandArgs.TryGetValue("replace", "false").In("", "true");
                 var useQueueAsync = commandArgs.TryGetValue("useQueueAsync", "false").In("", "true");
                 var sasMinutes = commandArgs.TryGetValue("sas", "10");
+                var deleteOnFinish = commandArgs.TryGetValue("delete", "false").In("", "true");
 
                 if (commandArgs.TryGetValue("0", out string fileName))
                 {
@@ -44,9 +45,9 @@ namespace TusConsoleApp
                     {
                         Thread.Sleep(2000); // Esperar a que cargue el servidor.
 
-                        //await TestModelo1Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt);
-                        //await TestModelo3Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt);
-                        await TestModelo3Async_ByStream(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt);
+                        //await TestModelo1Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt, deleteOnFinish);
+                        //await TestModelo3Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt, deleteOnFinish);
+                        await TestModelo3Async_ByStream(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt, deleteOnFinish);
 
                         Console.WriteLine();
                     }
@@ -68,7 +69,7 @@ namespace TusConsoleApp
             Console.ReadKey();
         }
 
-        static async Task TestModelo1Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10)
+        static async Task TestModelo1Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10, bool deleteOnFinish = false)
         {
 
             /* Upload file */
@@ -111,9 +112,14 @@ namespace TusConsoleApp
             // Print result.
             await PrintResultAsync(client, uploader.FileUrl, file, sasMinutes);
 
+            // Delete blob.
+            if (deleteOnFinish)
+            {
+                await DeleteAsync(client, uploader.FileUrl);
+            }
         }
 
-        static async Task TestModelo3Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10)
+        static async Task TestModelo3Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10, bool deleteOnFinish = false)
         {
             var stw = System.Diagnostics.Stopwatch.StartNew();
             var client = new TusClient(
@@ -155,9 +161,14 @@ namespace TusConsoleApp
             // Print result.
             await PrintResultAsync(client, uploader.FileUrl, file, sasMinutes);
 
+            // Delete blob.
+            if (deleteOnFinish)
+            {
+                await DeleteAsync(client, uploader.FileUrl);
+            }
         }
 
-        static async Task TestModelo3Async_ByStream(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10)
+        static async Task TestModelo3Async_ByStream(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10, bool deleteOnFinish = false)
         {
             var stw = System.Diagnostics.Stopwatch.StartNew();
             var client = new TusClient(
@@ -206,6 +217,11 @@ namespace TusConsoleApp
             // Print result.
             await PrintResultAsync(client, uploader.FileUrl, file, sasMinutes);
 
+            // Delete blob.
+            if (deleteOnFinish)
+            {
+                await DeleteAsync(client, uploader.FileUrl);
+            }
         }
 
 
@@ -263,6 +279,14 @@ namespace TusConsoleApp
                 Console.WriteLine($"Created on:\t{detailsWithVer.CreatedOn}");
                 Console.WriteLine($"Url SAS:\t{sasUrlWithVer}");
             }
+        }
+
+        static async Task DeleteAsync(TusClient client, string fileUrl)
+        {
+            Console.WriteLine();
+
+            await client.DeleteBlobAsync(fileUrl);
+            Console.WriteLine("Deleted.");
         }
 
     }
