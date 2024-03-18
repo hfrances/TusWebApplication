@@ -29,18 +29,24 @@ namespace TusConsoleApp
                 var blobName = commandArgs.TryGetValue("blob", string.Empty);
                 var replace = commandArgs.TryGetValue("replace", "false").In("", "true");
                 var useQueueAsync = commandArgs.TryGetValue("useQueueAsync", "false").In("", "true");
+                var sasMinutes = commandArgs.TryGetValue("sas", "10");
 
                 if (commandArgs.TryGetValue("0", out string fileName))
                 {
                     var file = new System.IO.FileInfo(fileName);
+                    int sasMinutesInt;
 
-                    if (file.Exists)
+                    if (!int.TryParse(sasMinutes, out sasMinutesInt))
+                    {
+                        Console.WriteLine("Invalid format for parameter 'sas'. It must be a numeric value.");
+                    }
+                    else if (file.Exists)
                     {
                         Thread.Sleep(2000); // Esperar a que cargue el servidor.
 
-                        //await TestModelo1Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync);
-                        //await TestModelo3Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync);
-                        await TestModelo3Async_ByStream(settings, storeName, containerName, file, blobName, replace, useQueueAsync);
+                        //await TestModelo1Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt);
+                        //await TestModelo3Async(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt);
+                        await TestModelo3Async_ByStream(settings, storeName, containerName, file, blobName, replace, useQueueAsync, sasMinutesInt);
 
                         Console.WriteLine();
                     }
@@ -62,7 +68,7 @@ namespace TusConsoleApp
             Console.ReadKey();
         }
 
-        static async Task TestModelo1Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync)
+        static async Task TestModelo1Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10)
         {
 
             /* Upload file */
@@ -103,11 +109,11 @@ namespace TusConsoleApp
             Console.WriteLine($"Elapsed time:\t{stw.Elapsed}");
 
             // Print result.
-            await PrintResultAsync(client, uploader.FileUrl, file);
+            await PrintResultAsync(client, uploader.FileUrl, file, sasMinutes);
 
         }
 
-        static async Task TestModelo3Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync)
+        static async Task TestModelo3Async(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10)
         {
             var stw = System.Diagnostics.Stopwatch.StartNew();
             var client = new TusClient(
@@ -147,11 +153,11 @@ namespace TusConsoleApp
             Console.WriteLine($"Elapsed time:\t{stw.Elapsed}"); ;
 
             // Print result.
-            await PrintResultAsync(client, uploader.FileUrl, file);
+            await PrintResultAsync(client, uploader.FileUrl, file, sasMinutes);
 
         }
 
-        static async Task TestModelo3Async_ByStream(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync)
+        static async Task TestModelo3Async_ByStream(TusSettings settings, string storeName, string containerName, System.IO.FileInfo file, string blobName, bool replace, bool useQueueAsync, int sasMinutes = 10)
         {
             var stw = System.Diagnostics.Stopwatch.StartNew();
             var client = new TusClient(
@@ -198,12 +204,12 @@ namespace TusConsoleApp
             }
 
             // Print result.
-            await PrintResultAsync(client, uploader.FileUrl, file);
+            await PrintResultAsync(client, uploader.FileUrl, file, sasMinutes);
 
         }
 
 
-        static async Task PrintResultAsync(TusClient client, string fileUrl, FileInfo file)
+        static async Task PrintResultAsync(TusClient client, string fileUrl, FileInfo file, int sasMinutes)
         {
             /* Calculate Hash */
             string contentHash;
@@ -228,7 +234,7 @@ namespace TusConsoleApp
 
             /* Generate SAS */
             Uri sasUri, sasUriInline, sasUriAttachment;
-            sasUri = await client.GenerateSasUrlAsync(new Uri(fileUrl), TimeSpan.FromMinutes(10));
+            sasUri = await client.GenerateSasUrlAsync(new Uri(fileUrl), TimeSpan.FromMinutes(sasMinutes));
             Console.WriteLine($"Created on:\t{details.CreatedOn}");
             Console.WriteLine($"Url SAS:\t{sasUri}");
             sasUriInline = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "true" } });
