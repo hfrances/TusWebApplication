@@ -19,7 +19,7 @@
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="10.0.1" />
     <PackageReference Include="qckdev.AspNetCore" Version="0.6.3" />
     <PackageReference Include="qckdev.AspNetCore.Authentication.JwtBearer" Version="0.2.0-alpha" />
-    <PackageReference Include="qckdev.AspNetCore.Mvc.Filters.IpSafe" Version="1.2.0" />
+    <PackageReference Include="qckdev.AspNetCore.Mvc.Filters.IpSafe" Version="1.2.2" />
     <PackageReference Include="qckdev.Authentication.JwtBearer" Version="0.1.0-alpha" />
     <PackageReference Include="qckdev.Extensions.Configuration.Abstractions" Version="1.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />

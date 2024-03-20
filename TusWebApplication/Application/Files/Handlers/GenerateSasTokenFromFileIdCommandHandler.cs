@@ -35,18 +35,8 @@ namespace TusWebApplication.Application.Files.Handlers
                         async (blob, cancellationToken) =>
                         {
                             var properties = (await blob.GetPropertiesAsync(cancellationToken: cancellationToken)).Value;
-                            var token = SasHelper.GenerateSasHash(request.Body.ExpiresOn, blob, properties);
-                            var query = new Dictionary<string, string?>();
-                            
-                            if (request.Parameters?.VersionId != null)
-                            {
-                                query.Add("versionId", request.Parameters.VersionId);
-                            }
-                            query.Add("sv", "1");
-                            query.Add("se", request.Body.ExpiresOn.ToString("O"));
-                            query.Add("sig", token);
-                            return QueryHelpers.AddQueryString("", query);
 
+                            return SasHelper.GenerateSasString(request.Body.ExpiresOn, blob, properties, request.Parameters?.VersionId);
                         }, cancellationToken),
                 cancellationToken);
 

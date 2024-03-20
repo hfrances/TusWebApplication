@@ -9,12 +9,12 @@ namespace TusClientLibrary
     public sealed class ImportDetails
     {
 
-        public string StoreName { get; set; }
-        public string BlobId { get; set; }
-        public string Version { get; set; }
+        public string StoreName { get; internal set; }
+        public string BlobId { get; internal set; }
+        public string Version { get; internal set; }
 
-        public string FileUrl { get; set; }
-        public string RelativeUrl => new Uri(FileUrl).AbsolutePath;
+        public string FileUrl { get; internal set; }
+        public string RelativeUrl { get; internal set; }
 
     }
 }

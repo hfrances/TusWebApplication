@@ -21,7 +21,7 @@ namespace TusClientLibrary
         public string StoreName => UploadToken.StoreName;
         public string BlobId => UploadToken.BlobId;
         public string FileUrl { get; }
-        public string RelativeUrl => new Uri(FileUrl).AbsolutePath;
+        public string RelativeUrl => BaseAddress.MakeRelativeUri(new Uri(FileUrl)).ToString();
 
         internal TusUploaderAsync(Uri baseAddress, TusDotNetClient.TusClient tusClient, UploadToken uploadToken, string fileUrl)
         {

@@ -7,7 +7,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TusWebApplication", "TusWeb
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TusConsoleApp", "TusConsoleApp\TusConsoleApp.csproj", "{61042FB8-E233-49CA-8D44-50EF669A2071}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TusClientLibrary", "TusClientLibrary\TusClientLibrary.csproj", "{D8F46181-DF1C-4358-9E89-EDDD7717314B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TusClientLibrary", "TusClientLibrary\TusClientLibrary.csproj", "{D8F46181-DF1C-4358-9E89-EDDD7717314B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TusClientLibrary.Test", "TusClientLibrary.Test\TusClientLibrary.Test.csproj", "{4C957D3B-6F7E-4163-B143-98303062DB72}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -27,6 +29,10 @@ Global
 		{D8F46181-DF1C-4358-9E89-EDDD7717314B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D8F46181-DF1C-4358-9E89-EDDD7717314B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D8F46181-DF1C-4358-9E89-EDDD7717314B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C957D3B-6F7E-4163-B143-98303062DB72}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C957D3B-6F7E-4163-B143-98303062DB72}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C957D3B-6F7E-4163-B143-98303062DB72}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C957D3B-6F7E-4163-B143-98303062DB72}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

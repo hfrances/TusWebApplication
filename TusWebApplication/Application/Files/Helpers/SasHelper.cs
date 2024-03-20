@@ -1,6 +1,8 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.AspNetCore.WebUtilities;
 using System;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -10,6 +12,24 @@ namespace TusWebApplication.Application.Files.Helpers
     {
 
         static readonly SHA256 ShaHash = SHA256.Create();
+
+
+        public static string GenerateSasString(DateTimeOffset expiresOn, BlobClient blob, BlobProperties properties, string? versionId)
+        {
+            var token = GenerateSasHash(expiresOn, blob, properties);
+            var query = new Dictionary<string, string?>();
+            string queryString;
+
+            if (versionId != null)
+            {
+                query.Add("versionId", versionId);
+            }
+            query.Add("sv", "1");
+            query.Add("se", expiresOn.ToString("O"));
+            query.Add("sig", token);
+            queryString = QueryHelpers.AddQueryString("", query);
+            return queryString.Substring(1); // Remove "?"
+        }
 
         public static string GenerateSasHash(DateTimeOffset expiresOn, BlobClient blob, BlobProperties properties)
         {

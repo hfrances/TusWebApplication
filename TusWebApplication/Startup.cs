@@ -20,7 +20,7 @@ using TusWebApplication.TusAzure.Authentication;
 namespace TusWebApplication
 {
     
-    internal class Startup
+    public class Startup
     {
         public Startup(IConfiguration configuration)
         {
@@ -34,7 +34,7 @@ namespace TusWebApplication
         public void ConfigureServices(IServiceCollection services)
         {
             var jwtTokenConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("_Default").Get<Settings.JwtTokenConfiguration>();
-            var jwtTokenUploadConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("Upload").Get<TusAzure.Authentication.JwtTokenConfiguration>();
+            var jwtTokenUploadConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("Upload").Get<JwtTokenConfiguration>();
             var ipSafeListSettings = Configuration.GetSection("Security").GetSection("IpSafeList").Get<IpSafeListSettings>();
             var corsSettings = Configuration.GetSection("Cors").Get<Settings.CorsSettings>() ?? new Settings.CorsSettings();
 

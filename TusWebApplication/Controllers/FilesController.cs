@@ -2,6 +2,8 @@
 using Microsoft.AspNetCore.Mvc;
 using qckdev.AspNetCore.Mvc.Filters.IpSafe;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Commands;
 using TusWebApplication.Application.Files.Dtos;
@@ -77,7 +79,7 @@ namespace TusWebApplication.Controllers
             });
 
         /// <summary>
-        /// Returns an url that includes a temporal shared access signature.
+        /// Returns a temporal shared access signature for the specific blob.
         /// Requires an authentication bearer token created with 'auth' controller.
         /// </summary>
         /// <param name="store">Store name</param>
@@ -85,7 +87,7 @@ namespace TusWebApplication.Controllers
         /// <param name="blob">Blob name</param>
         /// <param name="parameters"></param>
         /// <param name="body"></param>
-        [HttpPost("{store}/{container}/{blob}/generateSas"), Authorize, IpSafeFilter]
+        [HttpPost("{store}/{container}/{blob}/sas"), Authorize, IpSafeFilter]
         public Task<string> GenerateSas(string store, string container, string blob, [FromQuery] GenerateSasTokenFromFileIdCommand.RequestParameters parameters, [FromBody] GenerateSasTokenFromFileIdCommand.RequestBody body)
             => Send(new GenerateSasTokenFromFileIdCommand
             {
@@ -93,6 +95,22 @@ namespace TusWebApplication.Controllers
                 ContainerName = container,
                 BlobName = blob,
                 Parameters = parameters,
+                Body = body
+            });
+
+        /// <summary>
+        /// Returns a temporal shared access signature for a list of blobs.
+        /// Requires an authentication bearer token created with 'auth' controller.
+        /// </summary>
+        /// <param name="store">Store name</param>
+        /// <param name="container">Container name</param>
+        /// <param name="body"></param>
+        [HttpPost("{store}/{container}/sas"), Authorize, IpSafeFilter]
+        public Task<IEnumerable<TokenSasDto>> GenerateSasArray(string store, string container, [FromBody] GenerateSasTokenFromArrayCommand.RequestBody body)
+            => Send(new GenerateSasTokenFromArrayCommand
+            {
+                StoreName = store,
+                ContainerName = container,
                 Body = body
             });
 
