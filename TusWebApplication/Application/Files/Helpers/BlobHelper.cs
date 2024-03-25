@@ -87,7 +87,7 @@ namespace TusWebApplication.Application.Files.Helpers
             }
             else if (blobStatus.Status == BlobStatus.UploadStatus.Error)
             {
-                throw new qckdev.AspNetCore.HttpHandledException(System.Net.HttpStatusCode.NotFound, "Error uploading blob. It is not available anymore.");
+                throw new qckdev.AspNetCore.HttpHandledException(System.Net.HttpStatusCode.Gone, "Error uploading blob. It is not available anymore.");
             }
             else
             {

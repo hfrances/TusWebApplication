@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -62,7 +63,7 @@ namespace TusClientLibrary
 
             try
             {
-                uri = new Uri(this.BaseAddress, GetRelativeFileUrl(storeName));
+                uri = new Uri(this.BaseAddress, UriHelper.GetRelativeFileUrl(storeName));
                 fileUrl = await tusClient.CreateAsync(
                     uri.OriginalString,
                     fileSize,
@@ -104,7 +105,7 @@ namespace TusClientLibrary
                 await AuthorizeAsync();
 
                 /* Create upload-token */
-                path = GetRelativeFileUrl(storeName, containerName, "request-upload");
+                path = UriHelper.GetRelativeFileUrl(storeName, containerName, "request-upload");
                 uploadToken = await InnerHttpClient.FetchAsync<UploadToken, TusResponse>(HttpMethod.Post, path, new
                 {
                     fileName,
@@ -113,8 +114,8 @@ namespace TusClientLibrary
                     size = fileSize,
                     contentType = options?.ContentType,
                     contentLanguage = options?.ContentLanguage,
-                    options?.Hash,
-                    options?.UseQueueAsync
+                    hash = options?.Hash,
+                    useQueueAsync = options?.UseQueueAsync ?? false
                 });
                 return uploadToken;
             }
@@ -133,7 +134,7 @@ namespace TusClientLibrary
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public Task<FileDetails> GetFileDetailsAsync(string storeName, string containerName, string blobName, bool includeVersions = false)
-            => GetFileDetailsAsync(GetRelativeFileUrl(storeName, containerName, blobName), includeVersions);
+            => GetFileDetailsAsync(UriHelper.GetRelativeFileUrl(storeName, containerName, blobName), includeVersions);
 
         /// <summary>
         /// Returns information about an specific blob.
@@ -147,7 +148,7 @@ namespace TusClientLibrary
             Uri requestUri;
             string versionId;
 
-            requestUri = ExtractParametersFromUri(fileUri, out versionId, out _);
+            requestUri = UriHelper.ExtractParametersFromUri(fileUri, out versionId, out _);
             return GetFileDetailsAsync(requestUri.ToString(), versionId, includeVersions);
         }
 
@@ -160,7 +161,7 @@ namespace TusClientLibrary
         /// <param name="includeVersions">Optional. Sets if must load all versions. It can increase response time.</param>
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public Task<FileDetails> GetFileDetailsAsync(string storeName, string containerName, string blobName, string versionId, bool includeVersions = false)
-            => GetFileDetailsAsync(GetRelativeFileUrl(storeName, containerName, blobName), versionId, includeVersions);
+            => GetFileDetailsAsync(UriHelper.GetRelativeFileUrl(storeName, containerName, blobName), versionId, includeVersions);
 
         /// <summary>
         /// Returns information about an specific blob.
@@ -172,7 +173,7 @@ namespace TusClientLibrary
         {
             FileDetails result;
             var fileUri = new Uri(this.BaseAddress, fileUrl);
-            Uri requestUri = GetBlobUriWithVersion(fileUri, "details", versionId, includeVersions);
+            Uri requestUri = UriHelper.GetBlobUriWithVersion(fileUri, "details", versionId, includeVersions);
 
             // Request.
             await AuthorizeAsync();
@@ -187,7 +188,7 @@ namespace TusClientLibrary
         /// <param name="expiresOn">The time during which the URL will be available.</param>
         /// <returns>An url that includes a temparl shared access signarute.</returns>
         public async Task<string> GenerateSasUrlAsync(string fileUrl, TimeSpan expiresOn)
-            => (await GenerateSasUrlAsync(new Uri(fileUrl), expiresOn)).ToString();
+            => (await GenerateSasUrlAsync(new Uri(this.BaseAddress, fileUrl), expiresOn)).ToString();
 
         /// <summary>
         /// Returns an url that includes a temporal shared access signature.
@@ -203,7 +204,7 @@ namespace TusClientLibrary
             string tokenSas;
 
             await AuthorizeAsync();
-            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/generateSas")
+            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/sas")
             {
                 Query = fileUri.Query
             };
@@ -224,6 +225,63 @@ namespace TusClientLibrary
                 Query = HttpHelper.BuildQueryString(queryParameters)
             };
             return result.Uri;
+        }
+
+        /// <summary>
+        /// Returns an url that includes a temporal shared access signature.
+        /// </summary>
+        /// <param name="fileUriList">A list of urls.</param>
+        /// <param name="expiresOn">The time during which the URL will be available.</param>
+        /// <returns>An url that includes a temparl shared access signarute.</returns>
+        public async Task<IEnumerable<TokenSas>> GenerateSasUrlAsync(IEnumerable<string> fileUriList, TimeSpan expiresOn)
+        {
+            var dictionary = new Dictionary<(string storeName, string containerName), IEnumerable<Uri>>();
+            var fileParts = fileUriList
+                .Select(x => new { OriginalUrl = x, Parts = FileUriParts.Parse(InnerHttpClient.BaseAddress, new Uri(this.BaseAddress, x)) })
+                .GroupBy(g => new { g.Parts.StoreName, g.Parts.ContainerName }); // Separar todas las rutas por store y container.
+            var tokenSasList = new List<TokenSasPrivate>();
+
+            // Generar tokens por cada grupo de store/container.
+            foreach (var group in fileParts)
+            {
+                var response
+                    = await InnerHttpClient.FetchAsync<IEnumerable<TokenSasPrivate>>(HttpMethod.Post,
+                    UriHelper.GetRelativeFileUrl(group.Key.StoreName, group.Key.ContainerName, "sas"),
+                    new
+                    {
+                        expiresOn = DateTimeOffset.Now.Add(expiresOn),
+                        blobs = group.Select(x => new { x.Parts.BlobName, x.Parts.VersionId })
+                    });
+                tokenSasList.AddRange(response);
+            }
+
+            // Montar las urls de salida.
+            return tokenSasList.Select(x =>
+            {
+                UriBuilder uriBuilder = null;
+
+                if (!string.IsNullOrWhiteSpace(x.TokenSas))
+                {
+                    var relativeUrl = UriHelper.GetRelativeFileUrl(x.StoreName, x.ContainerName, x.BlobName);
+                    var query = new Dictionary<string, string>();
+                    var querySas = HttpHelper.ParseQueryString(x.TokenSas);
+
+                    if (!string.IsNullOrWhiteSpace(x.Version))
+                    {
+                        query.Add("versionId", x.Version);
+                    }
+                    query = query.Union(querySas).ToDictionary(y => y.Key, y => y.Value);
+                    uriBuilder = new UriBuilder(new Uri(this.BaseAddress, relativeUrl))
+                    {
+                        Query = HttpHelper.BuildQueryString(query)
+                    };
+                }
+                return new TokenSas
+                {
+                    Url = uriBuilder?.Uri.ToString(),
+                    RelativeUrl = (uriBuilder != null ? BaseAddress.MakeRelativeUri(uriBuilder.Uri).ToString() : null)
+                };
+            });
         }
 
         /// <summary>
@@ -285,10 +343,11 @@ namespace TusClientLibrary
         /// <param name="blobName">Optional. Name of the blob in the <paramref name="storeName"/>. If null, the service autogenerates one.</param>
         /// <param name="options">Optional. Additional import options.</param>
         /// <param name="waitForComplete">Optional. When true, this function waits until copy has been finished.</param>
-        public async Task ImportFileAsync(string sourceUrl, string storeName, string containerName, string fileName, string blobName = null, UploadFileOptions options = null, bool waitForComplete = true)
+        public async Task<ImportDetails> ImportFileAsync(string sourceUrl, string storeName, string containerName, string fileName, string blobName = null, UploadFileOptions options = null, bool waitForComplete = true)
         {
             ImportDetailsPrivate result;
             string path;
+            Uri fileUri;
 
             try
             {
@@ -296,7 +355,7 @@ namespace TusClientLibrary
                 await AuthorizeAsync();
 
                 /* Action */
-                path = GetRelativeFileUrl(storeName, containerName, "import");
+                path = UriHelper.GetRelativeFileUrl(storeName, containerName, "import");
                 result = await InnerHttpClient.FetchAsync<ImportDetailsPrivate, TusResponse>(HttpMethod.Post, path, new
                 {
                     sourceUrl,
@@ -307,6 +366,12 @@ namespace TusClientLibrary
                     metadata = options?.Metadata,
                     waitForComplete
                 });
+                fileUri = new Uri(InnerHttpClient.BaseAddress, UriHelper.GetRelativeFileUrl(result.StoreName, result.BlobId));
+                return new ImportDetails
+                {
+                    Url = fileUri.ToString(),
+                    RelativeUrl = BaseAddress.MakeRelativeUri(fileUri).ToString()
+                };
             }
             catch (FetchFailedException<TusResponse> ex)
             {
@@ -321,7 +386,7 @@ namespace TusClientLibrary
         /// <param name="containerName">The name of the container of the <paramref name="storeName"/>.</param>
         /// <param name="blobName">Name of the blob in the <paramref name="storeName"/>.</param>
         public Task DeleteBlobAsync(string storeName, string containerName, string blobName, string versionId = null)
-            => DeleteBlobAsync(GetRelativeFileUrl(storeName, containerName, blobName), versionId);
+            => DeleteBlobAsync(UriHelper.GetRelativeFileUrl(storeName, containerName, blobName), versionId);
 
         /// <summary>
         /// Deletes the specific blob specific blob.
@@ -332,7 +397,7 @@ namespace TusClientLibrary
             try
             {
                 var fileUri = new Uri(this.BaseAddress, fileUrl);
-                var requestUri = GetBlobUriWithVersion(fileUri, versionId);
+                var requestUri = UriHelper.GetBlobUriWithVersion(fileUri, versionId);
 
                 // Request.
                 await AuthorizeAsync();
@@ -344,7 +409,12 @@ namespace TusClientLibrary
             }
         }
 
-
+        /// <summary>
+        /// Configures <see cref="InnerHttpClient"/> with the authorization JWT token bearer.
+        /// </summary>
+        /// <remarks>
+        /// Checks if <see cref="AuthorizationToken"/> is exprired before regenerate it.
+        /// </remarks>
         async Task AuthorizeAsync()
         {
 
@@ -360,6 +430,14 @@ namespace TusClientLibrary
             }
         }
 
+        /// <summary>
+        /// Generates a new authorization JWT token bearer.
+        /// </summary>
+        /// <param name="client">The <see cref="HttpClient"/> used to request the new JWT token bearer.</param>
+        /// <param name="userName">Authentication user name.</param>
+        /// <param name="login">Authentication login.</param>
+        /// <param name="password">Authentication password.</param>
+        /// <returns>An authentication JWT token bearer.</returns>
         static async Task<Token> GetTokenAsync(HttpClient client, string userName, string login, string password)
         {
             var token = await client.FetchAsync<Token>(HttpMethod.Post, "auth", new

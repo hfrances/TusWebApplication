@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace TusClientLibrary
 {
-    public sealed class ImportDetails
+    public enum FileUriPartsComparerType
     {
-
-        public string Url { get; internal set; }
-        public string RelativeUrl { get; internal set; }
-
+        FullPath,
+        RelativePath
     }
 }
