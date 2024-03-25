@@ -363,5 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Custom
-appsettings.[Dd]evelopment.json
+appsettings.*.json
 App.config
