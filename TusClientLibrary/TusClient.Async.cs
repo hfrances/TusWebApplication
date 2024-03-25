@@ -278,10 +278,10 @@ namespace TusClientLibrary
                 }
                 return new TokenSas
                 {
-                    //StoreName = x.StoreName,
-                    //ContainerName = x.ContainerName,
-                    //BlobName = x.BlobName,
-                    //Version = x.Version,
+                    StoreName = x.StoreName,
+                    ContainerName = x.ContainerName,
+                    BlobName = x.BlobName,
+                    Version = x.Version,
                     Url = uriBuilder?.Uri.ToString(),
                     RelativeUrl = (uriBuilder != null ? BaseAddress.MakeRelativeUri(uriBuilder.Uri).ToString() : null)
                 };

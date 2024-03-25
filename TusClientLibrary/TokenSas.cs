@@ -9,10 +9,10 @@ namespace TusClientLibrary
     public sealed class TokenSas
     {
 
-        //public string StoreName { get; internal set; }
-        //public string ContainerName { get; internal set; }
-        //public string BlobName { get; internal set; }
-        //public string Version { get; internal set; }
+        public string StoreName { get; internal set; }
+        public string ContainerName { get; internal set; }
+        public string BlobName { get; internal set; }
+        public string Version { get; internal set; }
 
         /// <summary>
         /// Gets the token SAS for the blob file or null if the blob does not exist.
