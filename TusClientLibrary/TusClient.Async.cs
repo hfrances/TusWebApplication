@@ -203,7 +203,10 @@ namespace TusClientLibrary
             IDictionary<string, string> queryParameters, queryParametersSas;
             string tokenSas;
 
+            /* Authorize. */
             await AuthorizeAsync();
+
+            /* Actions */
             requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/sas")
             {
                 Query = fileUri.Query
@@ -238,10 +241,13 @@ namespace TusClientLibrary
             var dictionary = new Dictionary<(string storeName, string containerName), IEnumerable<Uri>>();
             var fileParts = fileUriList
                 .Select(x => new { OriginalUrl = x, Parts = FileUriParts.Parse(InnerHttpClient.BaseAddress, new Uri(this.BaseAddress, x)) })
-                .GroupBy(g => new { g.Parts.StoreName, g.Parts.ContainerName }); // Separar todas las rutas por store y container.
+                .GroupBy(g => new { g.Parts.StoreName, g.Parts.ContainerName }); // Group paths by store and container.
             var tokenSasList = new List<TokenSasPrivate>();
 
-            // Generar tokens por cada grupo de store/container.
+            // Authorize.
+            await AuthorizeAsync();
+
+            // Generate tokens for each container and store.
             foreach (var group in fileParts)
             {
                 var response
@@ -255,7 +261,7 @@ namespace TusClientLibrary
                 tokenSasList.AddRange(response);
             }
 
-            // Montar las urls de salida.
+            // Return paths with token Sas.
             return tokenSasList.Select(x =>
             {
                 UriBuilder uriBuilder = null;

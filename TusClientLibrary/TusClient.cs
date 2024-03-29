@@ -228,7 +228,10 @@ namespace TusClientLibrary
             IDictionary<string, string> queryParameters, queryParametersSas;
             string tokenSas;
 
+            /* Authorize */
             Authorize();
+
+            /* Actions */
             requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/sas")
             {
                 Query = fileUri.Query
@@ -258,14 +261,58 @@ namespace TusClientLibrary
         /// <param name="fileUriList">A list of urls.</param>
         /// <param name="expiresOn">The time during which the URL will be available.</param>
         /// <returns>An url that includes a temparl shared access signarute.</returns>
-        public IEnumerable<Uri> GenerateSasUrl(IEnumerable<string> fileUriList, TimeSpan expiresOn)
+        public IEnumerable<TokenSas> GenerateSasUrl(IEnumerable<string> fileUriList, TimeSpan expiresOn)
         {
             var dictionary = new Dictionary<(string storeName, string containerName), IEnumerable<Uri>>();
             var fileParts = fileUriList
-                .Select(x => FileUriParts.Parse(InnerHttpClient.BaseAddress, new Uri(this.BaseAddress, x)))
-                .GroupBy(g => new { g.StoreName, g.ContainerName });
+                .Select(x => new { OriginalUrl = x, Parts = FileUriParts.Parse(InnerHttpClient.BaseAddress, new Uri(this.BaseAddress, x)) })
+                .GroupBy(g => new { g.Parts.StoreName, g.Parts.ContainerName }); // Group paths by store and container.
+            var tokenSasList = new List<TokenSasPrivate>();
 
-            throw new NotSupportedException();
+            // Authorize.
+            Authorize();
+
+            // Generate tokens for each container and store.
+            foreach (var group in fileParts)
+            {
+                var response
+                    = InnerHttpClient.Fetch<IEnumerable<TokenSasPrivate>>(HttpMethod.Post,
+                    UriHelper.GetRelativeFileUrl(group.Key.StoreName, group.Key.ContainerName, "sas"),
+                    new
+                    {
+                        expiresOn = DateTimeOffset.Now.Add(expiresOn),
+                        blobs = group.Select(x => new { x.Parts.BlobName, x.Parts.VersionId })
+                    });
+                tokenSasList.AddRange(response);
+            }
+
+            // Return paths with token Sas.
+            return tokenSasList.Select(x =>
+            {
+                UriBuilder uriBuilder = null;
+
+                if (!string.IsNullOrWhiteSpace(x.TokenSas))
+                {
+                    var relativeUrl = UriHelper.GetRelativeFileUrl(x.StoreName, x.ContainerName, x.BlobName);
+                    var query = new Dictionary<string, string>();
+                    var querySas = HttpHelper.ParseQueryString(x.TokenSas);
+
+                    if (!string.IsNullOrWhiteSpace(x.Version))
+                    {
+                        query.Add("versionId", x.Version);
+                    }
+                    query = query.Union(querySas).ToDictionary(y => y.Key, y => y.Value);
+                    uriBuilder = new UriBuilder(new Uri(this.BaseAddress, relativeUrl))
+                    {
+                        Query = HttpHelper.BuildQueryString(query)
+                    };
+                }
+                return new TokenSas
+                {
+                    Url = uriBuilder?.Uri.ToString(),
+                    RelativeUrl = (uriBuilder != null ? BaseAddress.MakeRelativeUri(uriBuilder.Uri).ToString() : null)
+                };
+            });
         }
 
         /// <summary>
