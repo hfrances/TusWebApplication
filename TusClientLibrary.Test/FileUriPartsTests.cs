@@ -61,6 +61,26 @@ namespace TusClientLibrary.Test
         }
 
         [TestMethod]
+        public void ParseString_Absolute_Version()
+        {
+            FileUriParts parts;
+
+            parts = FileUriParts.Parse("https://localhost:5120/storage/files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z");
+            Assert.AreEqual(
+                (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
+                (new Uri("https://localhost:5120/storage"), "mystore", "other", "prueba", "other/prueba", "2022-11-14T14:55:05.2489168Z")
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
+                parts.GetRelativeUrl(withVersion: true)
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba",
+                parts.GetRelativeUrl(withVersion: false)
+            );
+        }
+
+        [TestMethod]
         public void ParseString_Relative_Format1()
         {
             FileUriParts parts;
@@ -69,6 +89,30 @@ namespace TusClientLibrary.Test
             Assert.AreEqual(
                 (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
                 ((Uri)null, "mystore", "other", "prueba", "other/prueba", (string)null)
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba",
+                parts.GetRelativeUrl()
+            );
+        }
+
+        [TestMethod]
+        public void ParseString_Relative_Format1_Version()
+        {
+            FileUriParts parts;
+
+            parts = FileUriParts.Parse("files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z");
+            Assert.AreEqual(
+                (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
+                ((Uri)null, "mystore", "other", "prueba", "other/prueba", "2022-11-14T14:55:05.2489168Z")
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
+                parts.GetRelativeUrl(withVersion: true)
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba",
+                parts.GetRelativeUrl(withVersion: false)
             );
         }
 

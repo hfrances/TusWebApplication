@@ -35,6 +35,23 @@ namespace TusClientLibrary
 
         /// <summary>
         /// Returns a path with the version and the includeVersions query parameters.
+        /// If the <paramref name="fileUrl"/> already contains those parameters, they are replaced (excepting if they are null).
+        /// </summary>
+        /// <param name="fileUrl">The current file uri where add the query parameters.</param>
+        /// <param name="versionId">Sets the "version" query parameter. Null for ignore it.</param>
+        /// <param name="includeVersions">Sets the "includeVersion" query parameter. Null for ignore it.</param>
+        public static string GetBlobUriWithVersion(string fileUrl, string versionId, bool? includeVersions = null)
+        {
+            var baseUri = new Uri("http://localhost");
+            var fileUri = new Uri(baseUri, fileUrl);
+            Uri outputUri;
+
+            outputUri = GetBlobUriWithVersion(fileUri, versionId, includeVersions);
+            return baseUri.MakeRelativeUri(outputUri).ToString();
+        }
+
+        /// <summary>
+        /// Returns a path with the version and the includeVersions query parameters.
         /// If the <paramref name="fileUri"/> already contains those parameters, they are replaced (excepting if they are null).
         /// </summary>
         /// <param name="fileUri">The current file uri where add the query parameters.</param>
@@ -67,6 +84,25 @@ namespace TusClientLibrary
             }
             return requestUri.Uri;
         }
+
+        /// <summary>
+        /// Returns a <see cref="Uri"/> removing "version" and "includeVersions" query parameters. 
+        /// Those parameters are extracted in out parameters <paramref name="versionId"/> and <paramref name="includeVersions"/>.
+        /// </summary>
+        /// <param name="fileUrl">The current file uri where extract the query parameters.</param>
+        /// <param name="versionId">Output parameter with the "version" query value, or null if it is not present.</param>
+        /// <param name="includeVersions">Output parameter with the "includeVersions" query value, or null if it is not present.</param>
+        /// <returns>The original <see cref="Uri"/> without "version" and "includeVersions" query parameters.</returns>
+        public static string ExtractParametersFromUri(string fileUrl, out string versionId, out bool? includeVersions)
+        {
+            var baseUri = new Uri("http://localhost");
+            var fileUri = new Uri(baseUri, fileUrl);
+            Uri outputUri;
+
+            outputUri = ExtractParametersFromUri(fileUri, out versionId, out includeVersions);
+            return baseUri.MakeRelativeUri(outputUri).ToString();
+        }
+
 
         /// <summary>
         /// Returns a <see cref="Uri"/> removing "version" and "includeVersions" query parameters. 

@@ -7,15 +7,60 @@ using System.Xml.Linq;
 
 namespace TusClientLibrary
 {
+
+    /// <summary>
+    /// Provides an object representation of a file uniform resource identifier (URI) and easy access to the parts of it.
+    /// </summary>
     public sealed class FileUriParts
     {
 
+        /// <summary>
+        /// Gets or sets the working base path.
+        /// </summary>
         public Uri BasePath { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the store where the file is placed.
+        /// </summary>
         public string StoreName { get; set; }
+
+        /// <summary>
+        /// Gets or sets the name of the container of the <see cref="StoreName"/>.
+        /// </summary>
         public string ContainerName { get; set; }
+
+        /// <summary>
+        /// Gets or sets name of the blob in the <see cref="StoreName"/>.
+        /// </summary>
         public string BlobName { get; set; }
+
+        /// <summary>
+        /// Gets the concatenation of <see cref="ContainerName"/> and <see cref="BlobName"/>.
+        /// </summary>
         public string BlobId => $"{ContainerName}/{BlobName}";
+
+        /// <summary>
+        /// Gets or sets the version id of the blob or null if it was not set.
+        /// </summary>
         public string VersionId { get; set; }
+
+
+        /// <summary>
+        /// Gets the file relative url including <see cref="VersionId"/> if it was defined.
+        /// </summary>
+        /// <param name="withVersion">True for including <see cref="VersionId"/> (if it was defined). False for excluding it.</param>
+        public string GetRelativeUrl(bool withVersion = true)
+        {
+            string result;
+
+            result = UriHelper.GetRelativeFileUrl(this.StoreName, this.BlobId);
+            if (withVersion)
+            {
+                result = UriHelper.GetBlobUriWithVersion(result, this.VersionId);
+            }
+            return result;
+        }
+
 
         /// <summary>
         /// Extracts all elements from a file <see cref="Uri"/>
@@ -50,6 +95,12 @@ namespace TusClientLibrary
             return result;
         }
 
+        /// <summary>
+        /// Extracts all elements from a file <see cref="Uri"/>
+        /// </summary>
+        /// <param name="fileUrl">Blob file.</param>
+        /// <returns></returns>
+        /// <exception cref="FormatException"></exception>
         public static FileUriParts Parse(string fileUrl)
         {
             var fileUri = new Uri(fileUrl, UriKind.RelativeOrAbsolute);
@@ -57,6 +108,12 @@ namespace TusClientLibrary
             return Parse(fileUri);
         }
 
+        /// <summary>
+        /// Extracts all elements from a file <see cref="Uri"/>
+        /// </summary>
+        /// <param name="fileUri">Blob file <see cref="Uri"/></param>
+        /// <returns></returns>
+        /// <exception cref="FormatException"></exception>
         public static FileUriParts Parse(Uri fileUri)
         {
             FileUriParts result;
@@ -67,21 +124,22 @@ namespace TusClientLibrary
 
             if (fileUri.IsAbsoluteUri)
             {
+                Uri absoluteUrl;
+
                 // Absolute Uri: ignore "authority" and take the rest.
-                split = fileUri.AbsolutePath.Split('/');
+                absoluteUrl = UriHelper.ExtractParametersFromUri(fileUri, out versionId, out _);
+                split = absoluteUrl.AbsolutePath.Split('/');
             }
             else
             {
+                string relativeUrl;
+
                 // Relative Uri: cannot use any property excepting the "original string".
-                split = fileUri.OriginalString.Split('/'); // Ri
+                relativeUrl = UriHelper.ExtractParametersFromUri(fileUri.OriginalString, out versionId, out _);
+                split = relativeUrl.Split('/');
             }
             // Find where is the "files" uri part.
             index = Array.FindIndex(split, x => string.Equals(x, UriHelper.FILES_PATH, StringComparison.OrdinalIgnoreCase));
-            // Extract versionId.
-            UriHelper.ExtractParametersFromUri(
-                new Uri(new Uri("http://localhost"), fileUri),
-                out versionId, out _
-            );
             // Uri must contains almost 
             if (index >= 0 && split.Skip(index).Count() >= 4)
             {
