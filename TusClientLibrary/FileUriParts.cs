@@ -124,19 +124,21 @@ namespace TusClientLibrary
 
             if (fileUri.IsAbsoluteUri)
             {
-                Uri absoluteUrl;
+                Uri absoluteUri;
 
                 // Absolute Uri: ignore "authority" and take the rest.
-                absoluteUrl = UriHelper.ExtractParametersFromUri(fileUri, out versionId, out _);
-                split = absoluteUrl.AbsolutePath.Split('/');
+                absoluteUri = UriHelper.ExtractParametersFromUri(fileUri, out versionId, out _);
+                split = absoluteUri.AbsolutePath.Split('/'); // Extract path (without query).
             }
             else
             {
                 string relativeUrl;
+                Uri absoluteUri;
 
                 // Relative Uri: cannot use any property excepting the "original string".
                 relativeUrl = UriHelper.ExtractParametersFromUri(fileUri.OriginalString, out versionId, out _);
-                split = relativeUrl.Split('/');
+                absoluteUri = new Uri(new Uri("http://localhost"), relativeUrl);
+                split = absoluteUri.AbsolutePath.Split('/'); // Extract path (without query).
             }
             // Find where is the "files" uri part.
             index = Array.FindIndex(split, x => string.Equals(x, UriHelper.FILES_PATH, StringComparison.OrdinalIgnoreCase));

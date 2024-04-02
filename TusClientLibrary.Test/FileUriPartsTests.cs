@@ -81,6 +81,26 @@ namespace TusClientLibrary.Test
         }
 
         [TestMethod]
+        public void ParseString_Absolute_Version_Sas()
+        {
+            FileUriParts parts;
+
+            parts = FileUriParts.Parse("https://localhost:5120/storage/files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z&sv=1&se=2024-04-02T10%3A34%3A46.4108594%2B02%3A00&sig=wOKaVA2%2BmPv9Q9EMOp3ffT2Y8D1TDRiBD9XRJOhkVFM%3D");
+            Assert.AreEqual(
+                (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
+                (new Uri("https://localhost:5120/storage"), "mystore", "other", "prueba", "other/prueba", "2022-11-14T14:55:05.2489168Z")
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
+                parts.GetRelativeUrl(withVersion: true)
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba",
+                parts.GetRelativeUrl(withVersion: false)
+            );
+        }
+
+        [TestMethod]
         public void ParseString_Relative_Format1()
         {
             FileUriParts parts;
@@ -102,6 +122,26 @@ namespace TusClientLibrary.Test
             FileUriParts parts;
 
             parts = FileUriParts.Parse("files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z");
+            Assert.AreEqual(
+                (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
+                ((Uri)null, "mystore", "other", "prueba", "other/prueba", "2022-11-14T14:55:05.2489168Z")
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
+                parts.GetRelativeUrl(withVersion: true)
+            );
+            Assert.AreEqual(
+                "files/mystore/other/prueba",
+                parts.GetRelativeUrl(withVersion: false)
+            );
+        }
+
+        [TestMethod]
+        public void ParseString_Relative_Format1_Version_Sas()
+        {
+            FileUriParts parts;
+
+            parts = FileUriParts.Parse("files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z&sv=1&se=2024-04-02T10%3A34%3A46.4108594%2B02%3A00&sig=wOKaVA2%2BmPv9Q9EMOp3ffT2Y8D1TDRiBD9XRJOhkVFM%3D");
             Assert.AreEqual(
                 (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
                 ((Uri)null, "mystore", "other", "prueba", "other/prueba", "2022-11-14T14:55:05.2489168Z")
