@@ -329,7 +329,7 @@ jobs:
           tags: |
             latest
             $(MainProject.Version)
-        condition: and(ne(variables.ContainerRegistry, ''), eq(variables.PublishEnabled, 'true'))
+        condition: and(ne(variables.ContainerName, ''), eq(variables.PublishEnabled, 'true'))
 
 ################################################################################################
 # Version 2.1.0: Auto-detect main project, 
