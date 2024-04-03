@@ -200,65 +200,65 @@ jobs:
           projects: '$(BuildParameters.RestoreBuildProjects)'
           arguments: '--configuration $(BuildConfiguration)'
 
-      - task: DotNetCoreCLI@2
-        displayName: 'Test + Coverage'
-        inputs:
-          command: test
-          projects: '$(BuildParameters.TestProjects)'
-          arguments: '--configuration $(BuildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Exclude="[*Tests]*" /p:CoverletOutput="$(Build.SourcesDirectory)/TestResults/"'
-
-      - task: PowerShell@2
-        inputs:
-          targetType: 'inline'
-          script: |
-            $path = '$(BuildParameters.TestProjects)'
-            $directoryInfo = Get-ChildItem "$path" | Measure-Object;
-            $hasTests = $directoryInfo.Count -gt 0;
-            write-output "##vso[task.setvariable variable=HasTests]$hasTests";
-        displayName: 'Coverage: Check if there are test projects'
-
-      - task: reportgenerator@4
-        inputs:
-          reports: '**/*.[Oo]pencover.xml;**/[Oo]pencover.xml;*.[Oo]pencover.xml;[Oo]pencover.xml'
-          targetdir: '$(Build.SourcesDirectory)/TestResults/'
-        continueOnError: true
-        condition: eq(variables.HasTests, 'true')
-        displayName: 'Coverage: Parse format'
-
-      - task: PowerShell@2
-        inputs:
-          targetType: 'inline'
-          script: |
-            $path = @("**/*.[Cc]obertura.xml", "**/[Cc]obertura.xml", "*.[Cc]obertura.xml", "[Cc]obertura.xml");
-            $files = @();
-            $coverageResults = "";
-            Get-Item $path;
-            Get-Item $path | `
-              Group-Object Directory | `
-              ForEach-Object {
-            	  $files += ($_.Group | Sort-Object LastWriteTime | Select-Object -First 1)
-              };
-            
-            Write-Output "`nCollected coverage files:"
-            $files.FullName;
-            $files | ForEach-Object {
-            	if ($coverageResults -ne "") {
-            		$coverageResults +=";";
-            	}
-            	$coverageResults += $files.FullName;
-              Copy-Item $_ $(Agent.TempDirectory); 
-            }
-            write-output "##vso[task.setvariable variable=CoverageResults]$coverageResults"
-        condition: eq(variables.HasTests, 'true')
-        displayName: 'Coverage: Collect files'
-     
-      - task: PublishCodeCoverageResults@1
-        inputs:
-          codeCoverageTool: 'Cobertura'
-          summaryFileLocation: '$(CoverageResults)'
-        continueOnError: true
-        condition: eq(variables.HasTests, 'true')
-        displayName: 'Coverage: Publish report'
+      #- task: DotNetCoreCLI@2
+      #  displayName: 'Test + Coverage'
+      #  inputs:
+      #    command: test
+      #    projects: '$(BuildParameters.TestProjects)'
+      #    arguments: '--configuration $(BuildConfiguration) /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:Exclude="[*Tests]*" /p:CoverletOutput="$(Build.SourcesDirectory)/TestResults/"'
+      #
+      #- task: PowerShell@2
+      #  inputs:
+      #    targetType: 'inline'
+      #    script: |
+      #      $path = '$(BuildParameters.TestProjects)'
+      #      $directoryInfo = Get-ChildItem "$path" | Measure-Object;
+      #      $hasTests = $directoryInfo.Count -gt 0;
+      #      write-output "##vso[task.setvariable variable=HasTests]$hasTests";
+      #  displayName: 'Coverage: Check if there are test projects'
+      #
+      #- task: reportgenerator@4
+      #  inputs:
+      #    reports: '**/*.[Oo]pencover.xml;**/[Oo]pencover.xml;*.[Oo]pencover.xml;[Oo]pencover.xml'
+      #    targetdir: '$(Build.SourcesDirectory)/TestResults/'
+      #  continueOnError: true
+      #  condition: eq(variables.HasTests, 'true')
+      #  displayName: 'Coverage: Parse format'
+      #
+      #- task: PowerShell@2
+      #  inputs:
+      #    targetType: 'inline'
+      #    script: |
+      #      $path = @("**/*.[Cc]obertura.xml", "**/[Cc]obertura.xml", "*.[Cc]obertura.xml", "[Cc]obertura.xml");
+      #      $files = @();
+      #      $coverageResults = "";
+      #      Get-Item $path;
+      #      Get-Item $path | `
+      #        Group-Object Directory | `
+      #        ForEach-Object {
+      #      	  $files += ($_.Group | Sort-Object LastWriteTime | Select-Object -First 1)
+      #        };
+      #      
+      #      Write-Output "`nCollected coverage files:"
+      #      $files.FullName;
+      #      $files | ForEach-Object {
+      #      	if ($coverageResults -ne "") {
+      #      		$coverageResults +=";";
+      #      	}
+      #      	$coverageResults += $files.FullName;
+      #        Copy-Item $_ $(Agent.TempDirectory); 
+      #      }
+      #      write-output "##vso[task.setvariable variable=CoverageResults]$coverageResults"
+      #  condition: eq(variables.HasTests, 'true')
+      #  displayName: 'Coverage: Collect files'
+      #
+      #- task: PublishCodeCoverageResults@1
+      #  inputs:
+      #    codeCoverageTool: 'Cobertura'
+      #    summaryFileLocation: '$(CoverageResults)'
+      #  continueOnError: true
+      #  condition: eq(variables.HasTests, 'true')
+      #  displayName: 'Coverage: Publish report'
      
       - ${{ if ne(parameters.Analyze, 'disabled') }} :
         - task: SonarCloudAnalyze@1

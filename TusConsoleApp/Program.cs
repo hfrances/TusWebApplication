@@ -1,42 +1,28 @@
-﻿// See https://aka.ms/new-console-template for more information
-
+﻿using System;
+using qckdev;
 using System.Security.Cryptography;
+using qckdev.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Net.Http;
+using qckdev.Net.Http;
+using System.Configuration;
+using TusConsoleApp.Configuration;
+using System.Collections.Generic;
+using TusClientLibrary;
+using System.Linq;
+using System.IO;
 
-const string ServerAddress = "localhost";
-const int ServerPort = 5000;
-
-
-System.Threading.Thread.Sleep(2000);
-
-var serverUrl = string.Format("http://{0}:{1}/api/files/", ServerAddress, ServerPort);
-var file = new FileInfo(@"C:\Users\hfrances\Downloads\multipass-1.9.0+win-win64.exe");
-var file2 = new FileInfo(@"C:\Users\hfrances\Downloads\Docker Desktop Installer.exe");
-
-/* Upload file */
-var stw = System.Diagnostics.Stopwatch.StartNew();
-var client = new TusDotNetClient.TusClient();
-var fileUrl = await client.CreateAsync(serverUrl, file, new (string key, string value)[] {
-   new("container", "other"),
-   new("factor", "1,2")
-});
-var uploadOperation = client.UploadAsync(fileUrl, file, chunkSize: 5D);
-
-uploadOperation.Progressed += (transferred, total) =>
-    Console.WriteLine($"Progress: {transferred}/{total}");
-
-await uploadOperation;
-
-/* Calculate Hash */
-string contentHash;
-using (var md5 = MD5.Create())
+namespace TusConsoleApp
 {
-    using (var stream = File.OpenRead(file.FullName))
+    static class Program
     {
-        contentHash = Convert.ToBase64String(md5.ComputeHash(stream));
+
+        static void Main(string[] args)
+            => ProgramSync.Run(args);
+
+        static Task Main2(string[] args)
+            => ProgramAsync.Run(args);
+
     }
 }
-
-/* Output */
-Console.WriteLine($"Elapsed time: {stw.Elapsed} - {fileUrl} (Hash: {contentHash})");
-Console.WriteLine();
-//Console.ReadKey();
