@@ -29,6 +29,9 @@ parameters:
       - true
       - false
     default: disabled
+  - name: SupportsContainers
+    type: boolean
+    default: true
 
 variables:
   - name: BuildParameters.RestoreBuildProjects
@@ -49,8 +52,6 @@ variables:
     value: ${{ parameters.Deploy }}
   - name: PublishEnabled
     value: $[or(eq(variables.Deploy, 'true'), and(eq(variables.Deploy, 'auto'), or(eq(variables['Build.SourceBranch'], 'refs/heads/master'), eq(variables['Build.SourceBranch'], 'refs/heads/main'))))]
-  - name: SupportsContainers
-    value: $[ne(variables.ContainerRegistry, '')]
   - ${{ if ne(parameters.Analyze, 'disabled') }} :
     - name: Analyze
       value: ${{ parameters.Analyze }}
@@ -319,7 +320,7 @@ jobs:
           artifactName: 'build'
           targetPath: '$(Build.ArtifactStagingDirectory)/build/$(BuildParameters.OutputFile)'
 
-      - ${{ if eq(variables['SupportsContainers'], 'true') }} :
+      - ${{ if parameters.SupportsContainers }} :
         - task: Docker@2
           displayName: 'Docker: Build and Push'
           inputs:
@@ -331,7 +332,7 @@ jobs:
             tags: |
               latest
               $(MainProject.Version)
-          condition: and(ne(variables.ContainerName, ''), eq(variables.PublishEnabled, 'true'))
+          condition: and(ne(variables.ContainerRegistry, ''), ne(variables.ContainerName, ''), eq(variables.PublishEnabled, 'true'))
 
 ################################################################################################
 # Version 2.1.0: Auto-detect main project, 
