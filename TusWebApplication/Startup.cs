@@ -21,10 +21,10 @@ using TusWebApplication.TusAzure.Authentication;
 
 namespace TusWebApplication
 {
-    
+
     public class Startup
     {
-        
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -40,7 +40,7 @@ namespace TusWebApplication
             var jwtTokenUploadConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("Upload").Get<JwtTokenConfiguration>();
             var ipSafeListSettings = Configuration.GetSection("Security").GetSection("IpSafeList").Get<IpSafeListSettings>();
             var corsSettings = Configuration.GetSection("Cors").Get<Settings.CorsSettings>() ?? new Settings.CorsSettings();
-            
+
             services.AddCors(opts => opts.AddDefaultPolicy(policy => policy
                 .AllowAnyMethod().AllowAnyHeader()
                 .WithOrigins(corsSettings.Origins ?? new[] { CorsConstants.AnyOrigin })
@@ -93,16 +93,11 @@ namespace TusWebApplication
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger, 
-            IOptions<Settings.CredentialsConfiguration> credentials
-        )
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger, IOptions<IpSafeListSettings> ipSafeList)
         {
-            var iplist = Configuration.GetSection("Security").GetSection("IpSafeList").Get<IpSafeListSettings>();
-
-            logger.LogInformation($"Usr: {credentials.Value.Login}; Pwd: {credentials.Value.Password}");
-            logger.LogInformation($"Networks: {iplist.IpNetworks} Ips: {iplist.IpAddresses}");
-            
             var basePath = this.Configuration.GetSection("BasePath")?.Value ?? "/";
+
+            logger.LogInformation($"Networks: {ipSafeList.Value.IpNetworks ?? "<null>"} | Ips: {ipSafeList.Value.IpAddresses ?? "<null>"}");
 
             app.UseCors();
 
@@ -118,14 +113,14 @@ namespace TusWebApplication
             app.UseAuthorization();
 
             app.UseSerializedExceptionHandler();
-            
+
             app.UseTusAzure();
-            
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
                 //endpoints.MapTusAzure(basePath);
-                endpoints.MapGet("/", async context =>
+                endpoints.MapGet(" / ", async context =>
                 {
                     await context.Response.WriteAsync("Hello World!");
                 });
