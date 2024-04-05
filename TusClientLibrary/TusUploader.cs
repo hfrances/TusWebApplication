@@ -1,11 +1,11 @@
-﻿using System;
+﻿using TusDotNetClient;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using TusDotNetClient;
 using static TusClientLibrary.TusClient;
 
 namespace TusClientLibrary
@@ -65,7 +65,7 @@ namespace TusClientLibrary
             PerformUpload(uploadOperation, progressed);
         }
 
-        void PerformUpload(TusOperation<List<TusHttpResponse>> uploadOperation, ProgressedDelegate progressed)
+        void PerformUpload(TusDotNetClient.TusOperation<List<TusDotNetClient.TusHttpResponse>> uploadOperation, ProgressedDelegate progressed)
         {
             if (progressed != null)
             {

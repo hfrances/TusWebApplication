@@ -1,4 +1,5 @@
-﻿using qckdev.Net.Http;
+﻿using TusDotNetClient;
+using qckdev.Net.Http;
 using System;
 using System.Collections.Generic;
 using System.IO;
