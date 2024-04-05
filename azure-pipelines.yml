@@ -290,11 +290,11 @@ jobs:
           modifyOutputPath: false
           zipAfterPublish: false
 
-      - task: DeleteFiles@1
-        inputs:
-          SourceFolder: '$(Build.ArtifactStagingDirectory)/output'
-          Contents: 'CodeCoverage'
-        displayName: Delete CoverageCode folder
+      #- task: DeleteFiles@1
+      #  inputs:
+      #    SourceFolder: '$(Build.ArtifactStagingDirectory)/output'
+      #    Contents: 'CodeCoverage'
+      #  displayName: Delete CoverageCode folder
 
       - task: ArchiveFiles@2
         name: ZipArtifactsDev
@@ -319,13 +319,13 @@ jobs:
           artifactName: 'build'
           targetPath: '$(Build.ArtifactStagingDirectory)/build/$(BuildParameters.OutputFile)'
 
-      - ${{ if eq(variables.SupportsContainers, 'true') }} :
+      - ${{ if eq(variables['SupportsContainers'], 'true') }} :
         - task: Docker@2
           displayName: 'Docker: Build and Push'
           inputs:
             command: 'buildAndPush'
             containerRegistry: '$(ContainerRegistry)'
-            repository: 'webservices/$(ContainerName)'
+            repository: '$(ContainerName)'
             Dockerfile: '**/Dockerfile'
             buildContext: '$(Build.ArtifactStagingDirectory)/output'
             tags: |
