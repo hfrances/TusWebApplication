@@ -29,6 +29,9 @@ parameters:
       - true
       - false
     default: disabled
+  - name: SupportsContainers
+    type: boolean
+    default: true
 
 variables:
   - name: BuildParameters.RestoreBuildProjects
@@ -288,11 +291,11 @@ jobs:
           modifyOutputPath: false
           zipAfterPublish: false
 
-      - task: DeleteFiles@1
-        inputs:
-          SourceFolder: '$(Build.ArtifactStagingDirectory)/output'
-          Contents: 'CodeCoverage'
-        displayName: Delete CoverageCode folder
+      #- task: DeleteFiles@1
+      #  inputs:
+      #    SourceFolder: '$(Build.ArtifactStagingDirectory)/output'
+      #    Contents: 'CodeCoverage'
+      #  displayName: Delete CoverageCode folder
 
       - task: ArchiveFiles@2
         name: ZipArtifactsDev
@@ -316,6 +319,20 @@ jobs:
         inputs:
           artifactName: 'build'
           targetPath: '$(Build.ArtifactStagingDirectory)/build/$(BuildParameters.OutputFile)'
+
+      - ${{ if parameters.SupportsContainers }} :
+        - task: Docker@2
+          displayName: 'Docker: Build and Push'
+          inputs:
+            command: 'buildAndPush'
+            containerRegistry: '$(ContainerRegistry)'
+            repository: '$(ContainerName)'
+            Dockerfile: '**/Dockerfile'
+            buildContext: '$(Build.ArtifactStagingDirectory)/output'
+            tags: |
+              latest
+              $(MainProject.Version)
+          condition: and(ne(variables.ContainerRegistry, ''), ne(variables.ContainerName, ''), eq(variables.PublishEnabled, 'true'))
 
 ################################################################################################
 # Version 2.1.0: Auto-detect main project, 
