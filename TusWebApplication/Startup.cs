@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using qckdev.AspNetCore.Mvc.Filters.IpSafe;
 using qckdev.Extensions.Configuration;
@@ -22,6 +24,7 @@ namespace TusWebApplication
     
     public class Startup
     {
+        
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -37,7 +40,7 @@ namespace TusWebApplication
             var jwtTokenUploadConfiguration = Configuration.GetSection("Security").GetSection("Tokens").GetSection("Upload").Get<JwtTokenConfiguration>();
             var ipSafeListSettings = Configuration.GetSection("Security").GetSection("IpSafeList").Get<IpSafeListSettings>();
             var corsSettings = Configuration.GetSection("Cors").Get<Settings.CorsSettings>() ?? new Settings.CorsSettings();
-
+            
             services.AddCors(opts => opts.AddDefaultPolicy(policy => policy
                 .AllowAnyMethod().AllowAnyHeader()
                 .WithOrigins(corsSettings.Origins ?? new[] { CorsConstants.AnyOrigin })
@@ -90,8 +93,10 @@ namespace TusWebApplication
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger, IOptions<Settings.CredentialsConfiguration> credentials)
         {
+            logger.LogInformation($"Usr: {credentials.Value.Login}; Pwd: {credentials.Value.Password}");
+
             var basePath = this.Configuration.GetSection("BasePath")?.Value ?? "/";
 
             app.UseCors();

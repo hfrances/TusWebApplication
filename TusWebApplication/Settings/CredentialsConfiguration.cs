@@ -1,6 +1,6 @@
 ﻿namespace TusWebApplication.Settings
 {
-    sealed class CredentialsConfiguration
+    public sealed class CredentialsConfiguration
     {
 
         public string Login { get; set; } = string.Empty;
