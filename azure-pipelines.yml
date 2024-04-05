@@ -317,19 +317,19 @@ jobs:
           artifactName: 'build'
           targetPath: '$(Build.ArtifactStagingDirectory)/build/$(BuildParameters.OutputFile)'
 
-      - ${{ if ne(variables.ContainerRegistry, '') }} : 
-        - task: Docker@2
-          displayName: 'Docker: Build and Push'
-          inputs:
-            command: 'buildAndPush'
-            containerRegistry: '$(ContainerRegistry)'
-            repository: 'webservices/$(ContainerName)'
-            Dockerfile: '**/Dockerfile'
-            buildContext: '$(Build.ArtifactStagingDirectory)/output'
-            tags: |
-              latest
-              $(MainProject.Version)
-          condition: and(ne(variables.ContainerName, ''), eq(variables.PublishEnabled, 'true'))
+      #- ${{ if ne(variables.ContainerRegistry, '') }} :
+      - task: Docker@2
+        displayName: 'Docker: Build and Push'
+        inputs:
+          command: 'buildAndPush'
+          containerRegistry: '$(ContainerRegistry)'
+          repository: 'webservices/$(ContainerName)'
+          Dockerfile: '**/Dockerfile'
+          buildContext: '$(Build.ArtifactStagingDirectory)/output'
+          tags: |
+            latest
+            $(MainProject.Version)
+        condition: and(ne(variables.ContainerName, ''), eq(variables.PublishEnabled, 'true'))
 
 ################################################################################################
 # Version 2.1.0: Auto-detect main project, 
