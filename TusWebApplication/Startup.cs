@@ -93,10 +93,15 @@ namespace TusWebApplication
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger, IOptions<Settings.CredentialsConfiguration> credentials)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger, 
+            IOptions<Settings.CredentialsConfiguration> credentials
+        )
         {
-            logger.LogInformation($"Usr: {credentials.Value.Login}; Pwd: {credentials.Value.Password}");
+            var iplist = Configuration.GetSection("Security").GetSection("IpSafeList").Get<IpSafeListSettings>();
 
+            logger.LogInformation($"Usr: {credentials.Value.Login}; Pwd: {credentials.Value.Password}");
+            logger.LogInformation($"Networks: {iplist.IpNetworks} Ips: {iplist.IpAddresses}");
+            
             var basePath = this.Configuration.GetSection("BasePath")?.Value ?? "/";
 
             app.UseCors();
