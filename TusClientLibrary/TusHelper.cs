@@ -1,4 +1,4 @@
-﻿using TusDotNetClient;
+﻿using TusDotNetClient = qckdev.Storage.TusDotNetClient;
 using System;
 using System.Collections.Generic;
 using System.Linq;

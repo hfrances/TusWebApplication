@@ -9,7 +9,7 @@
     <PackageReference Include="MimeMapping" Version="3.0.1" />
     <PackageReference Include="qckdev" Version="0.4.0-beta" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
-    <PackageReference Include="TusDotNetClient" Version="1.2.0" />
+    <PackageReference Include="qckdev.Storage.TusDotNetClient" Version="1.2.1-alpha" />
   </ItemGroup>
 
   <ItemGroup>
