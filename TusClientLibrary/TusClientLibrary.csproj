@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1;net461;netstandard2.0</TargetFrameworks>
-    <Version>3.2.1-alpha</Version>
+    <Version>3.2.2-alpha</Version>
     <Authors>hfrances</Authors>
     <PackageProjectUrl>https://github.com/hfrances/TusWebApplication</PackageProjectUrl>
     <Description>Provides access to upload and download large files to Azure Blob Storage using TUS protocol.</Description>

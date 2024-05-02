@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-    <Version>3.2.1-alpha</Version>
-    <AssemblyVersion>3.2.1.0</AssemblyVersion>
+    <Version>3.2.2-alpha</Version>
+    <AssemblyVersion>3.2.2.0</AssemblyVersion>
     <Nullable>enable</Nullable>
     <Authors>hfrances</Authors>
     <PackageProjectUrl>https://github.com/hfrances/TusWebApplication</PackageProjectUrl>
@@ -23,6 +23,7 @@
     <PackageReference Include="qckdev.Authentication.JwtBearer" Version="0.1.0-alpha" />
     <PackageReference Include="qckdev.Extensions.Configuration.Abstractions" Version="1.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="6.0.1" />
     <PackageReference Include="System.Net.Http.Json" Version="6.0.1" />
     <PackageReference Include="tusdotnet" Version="2.7.2" />
   </ItemGroup>
