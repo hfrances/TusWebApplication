@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TusClientLibrary
 {
@@ -21,7 +20,7 @@ namespace TusClientLibrary
         /// </summary>
         /// <param name="subpaths">Sub paths of the "file" url. Example: file/subpath1/subpath2.</param>
         public static string GetRelativeFileUrl(params string[] subpaths)
-            => string.Join("/", Enumerable.Union(new[] { FILES_PATH }, (subpaths ?? Array.Empty<string>())));
+            => string.Join("/", Enumerable.Union(new[] { FILES_PATH }, (subpaths ?? new string[] { })).ToArray());
 
         /// <summary>
         /// Returns a path with the version and the includeVersions query parameters.
@@ -78,7 +77,7 @@ namespace TusClientLibrary
             {
                 Query = HttpHelper.BuildQueryString(queryParameters)
             };
-            if (!string.IsNullOrWhiteSpace(subpath))
+            if (!string.IsNullOrEmpty(subpath?.TrimEnd()))
             {
                 requestUri.Path += $"/{subpath}";
             }
@@ -152,7 +151,7 @@ namespace TusClientLibrary
             {
                 Query = HttpHelper.BuildQueryString(queryParameters)
             };
-            if (!string.IsNullOrWhiteSpace(subpath))
+            if (!string.IsNullOrEmpty(subpath?.TrimEnd()))
             {
                 requestUri.Path += $"/{subpath}";
             }

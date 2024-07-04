@@ -1,4 +1,6 @@
-﻿using TusDotNetClient = qckdev.Storage.TusDotNetClient;
+﻿#if NO_ASYNC
+#else
+using TusDotNetClient = qckdev.Storage.TusDotNetClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -139,3 +141,4 @@ namespace TusClientLibrary
 
     }
 }
+#endif

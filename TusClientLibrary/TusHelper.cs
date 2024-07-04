@@ -1,17 +1,16 @@
-﻿using TusDotNetClient = qckdev.Storage.TusDotNetClient;
+﻿using TusDotNetClientSync = qckdev.Storage.TusDotNetClientSync;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace TusClientLibrary
 {
     static class TusHelper
     {
 
-        public static void ApplyAuthorization(this TusDotNetClient.TusClient tusClient, string accessToken)
+        public static void ApplyAuthorization(this TusDotNetClientSync.TusClient tusClient, string accessToken)
         {
             if (tusClient.AdditionalHeaders.ContainsKey("Authorization"))
             {
@@ -20,16 +19,16 @@ namespace TusClientLibrary
             tusClient.AdditionalHeaders.Add("Authorization", $"Bearer {accessToken}");
         }
 
-        public static (string key, string value)[] CreateMedatada(IDictionary<string, string> tags, IDictionary<string, string> metadata)
+        public static TusDotNetClientSync.TusMetadata[] CreateMedatada(IDictionary<string, string> tags, IDictionary<string, string> metadata)
         {
-            var metadataParsed = new List<(string key, string value)>();
+            var metadataParsed = new List<TusDotNetClientSync.TusMetadata>();
 
             if (tags != null)
             {
                 // tags
                 foreach (var item in tags)
                 {
-                    metadataParsed.Add(($"TAG:{item.Key}", item.Value));
+                    metadataParsed.Add(new TusDotNetClientSync.TusMetadata($"TAG:{item.Key}", item.Value));
                 }
             }
             if (metadata != null)
@@ -37,7 +36,7 @@ namespace TusClientLibrary
                 // metadata
                 foreach (var item in metadata)
                 {
-                    metadataParsed.Add((item.Key, item.Value));
+                    metadataParsed.Add(new TusDotNetClientSync.TusMetadata(item.Key, item.Value));
                 }
             }
 

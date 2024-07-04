@@ -1,4 +1,6 @@
-﻿using System;
+﻿#if NO_ASYNC
+#else
+using System;
 using qckdev;
 using System.Security.Cryptography;
 using qckdev.Linq;
@@ -186,6 +188,7 @@ namespace TusConsoleApp
                 new CreateFileOptions
                 {
                     ContentType = Common.CalculateMimeType(file.FullName),
+                    ContentTypeAuto = Common.SetContentTypeAuto(),
                     Tags = new Dictionary<string, string>
                     {
                         { "extension", file.Extension }
@@ -251,12 +254,12 @@ namespace TusConsoleApp
             /* Generate SAS */
             Uri sasUri, sasUriInline, sasUriAttachment;
             sasUri = await client.GenerateSasUrlAsync(new Uri(fileUrl), TimeSpan.FromMinutes(sasMinutes));
-            Console.WriteLine($"Created on:\t{details.CreatedOn}");
-            Console.WriteLine($"Url SAS:\t{sasUri}");
+            Console.WriteLine($"Created on:\t {details.CreatedOn.ToLocalTime()} ({details.CreatedOn})");
+            Console.WriteLine($"Url SAS:\t{sasUri.OriginalString}");
             sasUriInline = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "true" } });
-            Console.WriteLine($"        \t{sasUriInline}");
+            Console.WriteLine($"        \t{sasUriInline.OriginalString}");
             sasUriAttachment = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "false" } });
-            Console.WriteLine($"        \t{sasUriAttachment}");
+            Console.WriteLine($"        \t{sasUriAttachment.OriginalString}");
 
             /* Generate SAS of previous version (if exists) */
             var previousVersion = details.Versions?.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);
@@ -291,3 +294,4 @@ namespace TusConsoleApp
 
     }
 }
+#endif

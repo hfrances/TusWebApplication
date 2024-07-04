@@ -2,15 +2,26 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net6.0;netcoreapp3.1;net461</TargetFrameworks>
+    <TargetFrameworks>net6.0;netcoreapp3.1;net461;net451;net35</TargetFrameworks>
   </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="MimeMapping" Version="3.0.1" />
-    <PackageReference Include="qckdev" Version="0.4.0-beta" />
-    <PackageReference Include="System.Configuration.ConfigurationManager" Version="7.0.0" />
-    <PackageReference Include="qckdev.Storage.TusDotNetClient" Version="1.2.1-alpha" />
+  <PropertyGroup Condition="'$(TargetFramework)'=='net451' or '$(TargetFramework)'=='net45' or '$(TargetFramework)'=='net40' or '$(TargetFramework)'=='net35'">
+    <DefineConstants>$(DefineConstants);NO_ASYNC</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='net6.0' or '$(TargetFramework)'=='netcoreapp3.1' or '$(TargetFramework)'=='netstandard2.0' or '$(TargetFramework)'=='net461'">
+    <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
   </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)'=='net451' or '$(TargetFramework)'=='net45' or '$(TargetFramework)'=='net40' or '$(TargetFramework)'=='net35'">
+    <Reference Include="System.Configuration" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Mime" Version="2.3.5" />
+    <PackageReference Include="qckdev" Version="0.4.0-beta" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <ProjectReference Include="..\TusClientLibrary\TusClientLibrary.csproj" />

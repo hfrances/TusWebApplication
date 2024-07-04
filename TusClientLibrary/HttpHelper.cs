@@ -1,8 +1,9 @@
-﻿using System;
+﻿using qckdev.Net.Http;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TusClientLibrary
 {
@@ -12,6 +13,11 @@ namespace TusClientLibrary
     /// </summary>
     public static class HttpHelper
     {
+
+        static HttpHelper()
+        {
+            ServicePointManager.SecurityProtocol |= SslProtocolsExtensions.Tls12;
+        }
 
         /// <summary>
         /// Extracts elements from a uri query string.
@@ -65,7 +71,7 @@ namespace TusClientLibrary
                 string value = (parameter.Value == null) ? null : Uri.EscapeDataString(parameter.Value);
                 keyValuePairs.Add($"{key}={value}");
             }
-            return string.Join("&", keyValuePairs);
+            return string.Join("&", keyValuePairs.ToArray());
         }
 
         /// <summary>
@@ -86,6 +92,34 @@ namespace TusClientLibrary
             {
                 Query = BuildQueryString(queryParameters)
             }.Uri;
+        }
+
+        public static HttpWebRequest CreateHttpWebRequest(HttpRequestMethod method, Uri basePath, string relativeUri, object content = null, string tokenBearer = null)
+        {
+            HttpWebRequest request;
+            Uri requestUri;
+
+            if (string.IsNullOrEmpty(relativeUri?.TrimEnd()))
+            {
+                requestUri = basePath;
+            }
+            else
+            {
+                requestUri = new Uri(basePath, relativeUri);
+            }
+            request = (HttpWebRequest)WebRequest.Create(requestUri);
+            request.Method = method.Method;
+            request.KeepAlive = false;
+
+            if (!string.IsNullOrEmpty(tokenBearer?.TrimEnd()))
+            {
+                request.Headers[HttpRequestHeader.Authorization] = $"Bearer {tokenBearer}";
+            }
+            if (content != null)
+            {
+                request.SetContent(content);
+            }
+            return request;
         }
 
     }

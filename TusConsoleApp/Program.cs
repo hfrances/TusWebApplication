@@ -3,9 +3,6 @@ using qckdev;
 using System.Security.Cryptography;
 using qckdev.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Net.Http;
-using qckdev.Net.Http;
 using System.Configuration;
 using TusConsoleApp.Configuration;
 using System.Collections.Generic;
@@ -21,8 +18,11 @@ namespace TusConsoleApp
         static void Main(string[] args)
             => ProgramSync.Run(args);
 
-        static Task Main2(string[] args)
-            => ProgramAsync.Run(args);
+#if NO_ASYNC
+#else
+        static System.Threading.Tasks.Task Main2(string[] args)
+        => ProgramAsync.Run(args);
 
+#endif
     }
 }

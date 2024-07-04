@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace TusConsoleApp
 {
@@ -26,7 +25,20 @@ namespace TusConsoleApp
 
         public static string CalculateMimeType(string fileName)
         {
-            return MimeMapping.MimeUtility.GetMimeMapping(fileName);
+#if NET461_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+            return HeyRed.Mime.MimeGuesser.GuessMimeType(fileName);
+#else
+            return null;
+#endif
+        }
+
+        public static bool? SetContentTypeAuto()
+        {
+#if NET461_OR_GREATER || NETCOREAPP3_1_OR_GREATER
+            return null;
+#else
+            return true;
+#endif
         }
 
     }

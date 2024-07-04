@@ -1,11 +1,9 @@
-﻿using TusDotNetClient = qckdev.Storage.TusDotNetClient;
+﻿using TusDotNetClientSync = qckdev.Storage.TusDotNetClientSync;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
 using System.Text;
-using System.Threading.Tasks;
 using static TusClientLibrary.TusClient;
 
 namespace TusClientLibrary
@@ -13,8 +11,7 @@ namespace TusClientLibrary
     public sealed class TusUploader
     {
 
-        TusDotNetClient.TusClient InnerTusClient { get; }
-        HttpClient InnerHttpClient { get; }
+        TusDotNetClientSync.TusClient InnerTusClient { get; }
 
         public Uri BaseAddress { get; }
         public UploadToken UploadToken { get; }
@@ -23,14 +20,12 @@ namespace TusClientLibrary
         public string FileUrl { get; }
         public string RelativeUrl => BaseAddress.MakeRelativeUri(new Uri(FileUrl)).ToString();
 
-        internal TusUploader(Uri baseAddress, TusDotNetClient.TusClient tusClient, UploadToken uploadToken, string fileUrl)
+        internal TusUploader(Uri baseAddress, TusDotNetClientSync.TusClient tusClient, UploadToken uploadToken, string fileUrl)
         {
             this.InnerTusClient = tusClient;
             this.BaseAddress = baseAddress;
             this.UploadToken = uploadToken;
             this.FileUrl = fileUrl;
-
-            this.InnerHttpClient = new HttpClient() { BaseAddress = baseAddress };
         }
 
         /// <summary>
@@ -60,12 +55,12 @@ namespace TusClientLibrary
             double chunkSize = 5D,
             ProgressedDelegate progressed = null)
         {
-            var uploadOperation = InnerTusClient.UploadAsync(this.FileUrl, fileStream, chunkSize);
+            var uploadOperation = InnerTusClient.Upload(this.FileUrl, fileStream, chunkSize);
 
             PerformUpload(uploadOperation, progressed);
         }
 
-        void PerformUpload(TusDotNetClient.TusOperation<List<TusDotNetClient.TusHttpResponse>> uploadOperation, ProgressedDelegate progressed)
+        void PerformUpload(TusDotNetClientSync.TusOperation<List<TusDotNetClientSync.TusHttpResponse>> uploadOperation, ProgressedDelegate progressed)
         {
             if (progressed != null)
             {
@@ -77,9 +72,9 @@ namespace TusClientLibrary
 
             try
             {
-                uploadOperation.Operation.Wait();
+                uploadOperation.Get();
             }
-            catch (AggregateException ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
+            catch (Exception ex) when (ex.InnerException is TusDotNetClientSync.TusException tusex)
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
@@ -103,7 +98,7 @@ namespace TusClientLibrary
         {
             var builder = new UriBuilder(fileUrl);
             var baseAddress = new Uri(builder.Uri.GetLeftPart(UriPartial.Authority));
-            var tusClient = new TusDotNetClient.TusClient();
+            var tusClient = new TusDotNetClientSync.TusClient();
             var token = new UploadToken { AccessToken = requestToken };
             TusUploader uploader;
 
@@ -128,7 +123,7 @@ namespace TusClientLibrary
         {
             var builder = new UriBuilder(fileUrl);
             var baseAddress = new Uri(builder.Uri.GetLeftPart(UriPartial.Authority));
-            var tusClient = new TusDotNetClient.TusClient();
+            var tusClient = new TusDotNetClientSync.TusClient();
             var token = new UploadToken { AccessToken = requestToken };
             TusUploader uploader;
 

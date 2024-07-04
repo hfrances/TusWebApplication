@@ -1,4 +1,6 @@
-﻿using TusDotNetClient = qckdev.Storage.TusDotNetClient;
+﻿#if NO_ASYNC
+#else
+using TusDotNetClient = qckdev.Storage.TusDotNetClient;
 using qckdev.Net.Http;
 using System;
 using System.Collections.Generic;
@@ -68,7 +70,7 @@ namespace TusClientLibrary
                 fileUrl = await tusClient.CreateAsync(
                     uri.OriginalString,
                     fileSize,
-                    TusHelper.CreateMedatada(options?.Tags, options?.Metadata)
+                    TusHelperAsync.CreateMedatada(options?.Tags, options?.Metadata)
                 );
                 return new TusUploaderAsync(this.BaseAddress, tusClient, uploadToken, fileUrl);
             }
@@ -107,17 +109,21 @@ namespace TusClientLibrary
 
                 /* Create upload-token */
                 path = UriHelper.GetRelativeFileUrl(storeName, containerName, "request-upload");
-                uploadToken = await InnerHttpClient.FetchAsync<UploadToken, TusResponse>(HttpMethod.Post, path, new
-                {
-                    fileName,
-                    blob = blobName,
-                    replace,
-                    size = fileSize,
-                    contentType = options?.ContentType,
-                    contentLanguage = options?.ContentLanguage,
-                    hash = options?.Hash,
-                    useQueueAsync = options?.UseQueueAsync ?? false
-                });
+                uploadToken = await HttpHelper.CreateHttpWebRequest(
+                        HttpRequestMethod.Post, this.BaseAddress, path, new
+                        {
+                            fileName,
+                            blob = blobName,
+                            replace,
+                            size = fileSize,
+                            contentType = options?.ContentType,
+                            contentTypeAuto = options?.ContentTypeAuto,
+                            contentLanguage = options?.ContentLanguage,
+                            hash = options?.Hash,
+                            useQueueAsync = options?.UseQueueAsync ?? false
+                        },
+                        AuthorizationToken.AccessToken
+                    ).FetchAsync<UploadToken, TusResponse>();
                 return uploadToken;
             }
             catch (FetchFailedException<TusResponse> ex)
@@ -178,7 +184,10 @@ namespace TusClientLibrary
 
             // Request.
             await AuthorizeAsync();
-            result = await InnerHttpClient.FetchAsync<FileDetails>(HttpMethod.Get, requestUri.ToString());
+            result = await HttpHelper.CreateHttpWebRequest(
+                    HttpRequestMethod.Get, this.BaseAddress, requestUri.ToString(),
+                    tokenBearer: AuthorizationToken.AccessToken
+                ).FetchAsync<FileDetails>();
             return result;
         }
 
@@ -215,10 +224,13 @@ namespace TusClientLibrary
 
             // Get URL queries, original and SAS token and merge them for the result.
             queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
-            tokenSas = await InnerHttpClient.FetchAsync<string>(HttpMethod.Post, requestUri.Uri.OriginalString, new
-            {
-                expiresOn = DateTimeOffset.Now.Add(expiresOn)
-            });
+            tokenSas = await HttpHelper.CreateHttpWebRequest(
+                    HttpRequestMethod.Post, this.BaseAddress, requestUri.Uri.OriginalString, new
+                    {
+                        expiresOn = DateTimeOffset.Now.Add(expiresOn)
+                    },
+                    AuthorizationToken.AccessToken
+                ).FetchAsync<string>();
             queryParametersSas = HttpHelper.ParseQueryString(tokenSas);
             foreach (var parameter in queryParametersSas)
             {
@@ -241,7 +253,7 @@ namespace TusClientLibrary
         {
             var dictionary = new Dictionary<(string storeName, string containerName), IEnumerable<Uri>>();
             var fileParts = fileUriList
-                .Select(x => new { OriginalUrl = x, Parts = FileUriParts.Parse(InnerHttpClient.BaseAddress, new Uri(this.BaseAddress, x)) })
+                .Select(x => new { OriginalUrl = x, Parts = FileUriParts.Parse(this.BaseAddress, new Uri(this.BaseAddress, x)) })
                 .GroupBy(g => new { g.Parts.StoreName, g.Parts.ContainerName }); // Group paths by store and container.
             var tokenSasList = new List<TokenSasPrivate>();
 
@@ -252,13 +264,15 @@ namespace TusClientLibrary
             foreach (var group in fileParts)
             {
                 var response
-                    = await InnerHttpClient.FetchAsync<IEnumerable<TokenSasPrivate>>(HttpMethod.Post,
-                    UriHelper.GetRelativeFileUrl(group.Key.StoreName, group.Key.ContainerName, "sas"),
-                    new
-                    {
-                        expiresOn = DateTimeOffset.Now.Add(expiresOn),
-                        blobs = group.Select(x => new { x.Parts.BlobName, x.Parts.VersionId })
-                    });
+                    = await HttpHelper.CreateHttpWebRequest(
+                        HttpRequestMethod.Post, this.BaseAddress, UriHelper.GetRelativeFileUrl(group.Key.StoreName, group.Key.ContainerName, "sas"),
+                        new
+                        {
+                            expiresOn = DateTimeOffset.Now.Add(expiresOn),
+                            blobs = group.Select(x => new { x.Parts.BlobName, x.Parts.VersionId })
+                        },
+                        AuthorizationToken.AccessToken
+                    ).FetchAsync<IEnumerable<TokenSasPrivate>>();
                 tokenSasList.AddRange(response);
             }
 
@@ -363,17 +377,20 @@ namespace TusClientLibrary
 
                 /* Action */
                 path = UriHelper.GetRelativeFileUrl(storeName, containerName, "import");
-                result = await InnerHttpClient.FetchAsync<ImportDetailsPrivate, TusResponse>(HttpMethod.Post, path, new
-                {
-                    sourceUrl,
-                    fileName,
-                    targetBlobName = blobName,
-                    contentType = options?.ContentType,
-                    tags = options?.Tags,
-                    metadata = options?.Metadata,
-                    waitForComplete
-                });
-                fileUri = new Uri(InnerHttpClient.BaseAddress, UriHelper.GetRelativeFileUrl(result.StoreName, result.BlobId));
+                result = await HttpHelper.CreateHttpWebRequest(
+                        HttpRequestMethod.Post, this.BaseAddress, path, new
+                        {
+                            sourceUrl,
+                            fileName,
+                            targetBlobName = blobName,
+                            contentType = options?.ContentType,
+                            tags = options?.Tags,
+                            metadata = options?.Metadata,
+                            waitForComplete
+                        },
+                        AuthorizationToken.AccessToken
+                    ).FetchAsync<ImportDetailsPrivate, TusResponse>();
+                fileUri = new Uri(this.BaseAddress, UriHelper.GetRelativeFileUrl(result.StoreName, result.BlobId));
                 return new ImportDetails
                 {
                     Url = fileUri.ToString(),
@@ -408,7 +425,8 @@ namespace TusClientLibrary
 
                 // Request.
                 await AuthorizeAsync();
-                await InnerHttpClient.FetchAsync<object, TusResponse>(HttpMethod.Delete, requestUri.ToString());
+                await HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Delete, this.BaseAddress, requestUri.ToString())
+                    .FetchAsync<object, TusResponse>();
             }
             catch (FetchFailedException<TusResponse> ex)
             {
@@ -417,7 +435,7 @@ namespace TusClientLibrary
         }
 
         /// <summary>
-        /// Configures <see cref="InnerHttpClient"/> with the authorization JWT token bearer.
+        /// Creates or updates the <see cref="AuthorizationToken"/> with the authorization JWT token bearer.
         /// </summary>
         /// <remarks>
         /// Checks if <see cref="AuthorizationToken"/> is exprired before regenerate it.
@@ -429,10 +447,7 @@ namespace TusClientLibrary
             {
                 if (this.AuthorizationToken == null || AuthorizationToken.Expired < DateTimeOffset.Now)
                 {
-                    InnerHttpClient.DefaultRequestHeaders.Authorization = null;
-
-                    this.AuthorizationToken = await GetTokenAsync(InnerHttpClient, Credentials.UserName, Credentials.Login, Credentials.Password);
-                    InnerHttpClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", AuthorizationToken.AccessToken);
+                    this.AuthorizationToken = await GetTokenAsync(this.BaseAddress, Credentials.UserName, Credentials.Login, Credentials.Password);
                 }
             }
         }
@@ -440,22 +455,23 @@ namespace TusClientLibrary
         /// <summary>
         /// Generates a new authorization JWT token bearer.
         /// </summary>
-        /// <param name="client">The <see cref="HttpClient"/> used to request the new JWT token bearer.</param>
+        /// <param name="baseAddress">The base address of the TUS service.</param>
         /// <param name="userName">Authentication user name.</param>
         /// <param name="login">Authentication login.</param>
         /// <param name="password">Authentication password.</param>
         /// <returns>An authentication JWT token bearer.</returns>
-        static async Task<Token> GetTokenAsync(HttpClient client, string userName, string login, string password)
+        static async Task<Token> GetTokenAsync(Uri baseAddress, string userName, string login, string password)
         {
-            var token = await client.FetchAsync<Token>(HttpMethod.Post, "auth", new
+            var token = await HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Post, baseAddress, "auth", new
             {
                 userName,
                 login,
                 password
-            });
+            }).FetchAsync<Token>();
 
             return token;
         }
 
     }
 }
+#endif

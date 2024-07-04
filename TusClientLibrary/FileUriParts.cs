@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace TusClientLibrary
@@ -84,7 +83,7 @@ namespace TusClientLibrary
                     BasePath = basePath,
                     StoreName = split[1],
                     ContainerName = split[2],
-                    BlobName = string.Join("/", split.Skip(3)),
+                    BlobName = string.Join("/", split.Skip(3).ToArray()),
                     VersionId = versionId,
                 };
             }
@@ -148,7 +147,7 @@ namespace TusClientLibrary
                 if (fileUri.IsAbsoluteUri)
                 {
                     // Build the absolute uri taking the authority and the previous elements to the "files" uri part.
-                    basePath = new Uri(new Uri(fileUri.GetLeftPart(UriPartial.Authority)), string.Join("/", split.Take(index)));
+                    basePath = new Uri(new Uri(fileUri.GetLeftPart(UriPartial.Authority)), string.Join("/", split.Take(index).ToArray()));
                 }
                 else
                 {
@@ -159,7 +158,7 @@ namespace TusClientLibrary
                     BasePath = basePath,
                     StoreName = split[index + 1],
                     ContainerName = split[index + 2],
-                    BlobName = string.Join("/", split.Skip(index + 3)),
+                    BlobName = string.Join("/", split.Skip(index + 3).ToArray()),
                     VersionId = versionId,
                 };
             }

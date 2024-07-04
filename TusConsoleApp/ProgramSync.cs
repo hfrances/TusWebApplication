@@ -1,17 +1,14 @@
 ﻿using System;
 using qckdev;
-using System.Security.Cryptography;
 using qckdev.Linq;
 using System.Threading;
-using System.Threading.Tasks;
-using System.Net.Http;
-using qckdev.Net.Http;
 using System.Configuration;
 using TusConsoleApp.Configuration;
 using System.Collections.Generic;
 using TusClientLibrary;
 using System.Linq;
 using System.IO;
+using System.Drawing;
 
 namespace TusConsoleApp
 {
@@ -100,10 +97,11 @@ namespace TusConsoleApp
             Console.WriteLine($"File path:\t{uploader.FileUrl}");
             Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
 
-            (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
+
+            var position = new Point(Console.CursorLeft, Console.CursorTop);
             uploader.Upload(file, 5D, (transferred, total) =>
             {
-                Console.SetCursorPosition(position.Left, position.Top);
+                Console.SetCursorPosition(position.X, position.Y);
                 Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
             });
             Console.WriteLine();
@@ -149,10 +147,10 @@ namespace TusConsoleApp
             Console.WriteLine($"Relative path:\t{uploader.RelativeUrl}");
 
             // Upload file in different layer.
-            (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
+            var position = new Point(Console.CursorLeft, Console.CursorTop);
             TusClient.UploadFile(uploader.FileUrl, uploader.UploadToken.AccessToken, file, 5D, (transferred, total) =>
             {
-                Console.SetCursorPosition(position.Left, position.Top);
+                Console.SetCursorPosition(position.X, position.Y);
                 Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
             });
             Console.WriteLine();
@@ -186,6 +184,7 @@ namespace TusConsoleApp
                 new CreateFileOptions
                 {
                     ContentType = Common.CalculateMimeType(file.FullName),
+                    ContentTypeAuto = Common.SetContentTypeAuto(),
                     Tags = new Dictionary<string, string>
                     {
                         { "extension", file.Extension }
@@ -204,10 +203,10 @@ namespace TusConsoleApp
             // Upload file in different layer.
             using (var stream = file.OpenRead())
             {
-                (int Left, int Top) position = (Console.CursorLeft, Console.CursorTop);
+                var position = new Point(Console.CursorLeft, Console.CursorTop);
                 TusClient.UploadFile(uploader.FileUrl, uploader.UploadToken.AccessToken, stream, 5D, (transferred, total) =>
                 {
-                    Console.SetCursorPosition(position.Left, position.Top);
+                    Console.SetCursorPosition(position.X, position.Y);
                     Console.Write($"Progress:\t{(decimal)transferred / total:P2}\t\t{transferred}/{total}");
                 });
                 Console.WriteLine();
@@ -250,12 +249,12 @@ namespace TusConsoleApp
             /* Generate SAS */
             Uri sasUri, sasUriInline, sasUriAttachment;
             sasUri = client.GenerateSasUrl(new Uri(fileUrl), TimeSpan.FromMinutes(sasMinutes));
-            Console.WriteLine($"Created on:\t{details.CreatedOn}");
-            Console.WriteLine($"Url SAS:\t{sasUri}");
+            Console.WriteLine($"Created on:\t {details.CreatedOn.ToLocalTime()} ({details.CreatedOn})");
+            Console.WriteLine($"Url SAS:\t{sasUri.OriginalString}");
             sasUriInline = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "true" } });
-            Console.WriteLine($"        \t{sasUriInline}");
+            Console.WriteLine($"        \t{sasUriInline.OriginalString}");
             sasUriAttachment = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "false" } });
-            Console.WriteLine($"        \t{sasUriAttachment}");
+            Console.WriteLine($"        \t{sasUriAttachment.OriginalString}");
 
             /* Generate SAS of previous version (if exists) */
             var previousVersion = details.Versions?.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);
