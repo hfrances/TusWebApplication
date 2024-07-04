@@ -175,7 +175,7 @@ jobs:
         displayName: Restore
         inputs:
           command: 'restore'
-          projects: '**/*.??proj'
+          projects: '$(BuildParameters.RestoreBuildProjects)'
      
       - ${{ if ne(parameters.Analyze, 'disabled') }} :
         - task: SonarCloudPrepare@1
