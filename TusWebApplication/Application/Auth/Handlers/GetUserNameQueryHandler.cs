@@ -23,7 +23,7 @@ namespace TusWebApplication.Application.Auth.Handlers
         public Task<LoginDto> Handle(GetUserNameQuery request, CancellationToken cancellationToken)
         {
             var httpContext = HttpContextAccessor.HttpContext;
-            var currentUser = httpContext.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+            var currentUser = httpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             if (string.IsNullOrWhiteSpace(currentUser))
             {

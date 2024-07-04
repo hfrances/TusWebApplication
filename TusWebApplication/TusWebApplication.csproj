@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-    <Version>3.2.2-alpha</Version>
-    <AssemblyVersion>3.2.2.0</AssemblyVersion>
+    <Version>3.3.0-alpha</Version>
+    <AssemblyVersion>3.3.0.0</AssemblyVersion>
     <Nullable>enable</Nullable>
     <Authors>hfrances</Authors>
     <PackageProjectUrl>https://github.com/hfrances/TusWebApplication</PackageProjectUrl>
@@ -17,6 +17,7 @@
     <PackageReference Include="AutoMapper" Version="11.0.1" />
     <PackageReference Include="Azure.Storage.Blobs" Version="12.19.0" />
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="10.0.1" />
+    <PackageReference Include="MimeTypesMap" Version="1.0.8" />
     <PackageReference Include="qckdev.AspNetCore" Version="0.6.3" />
     <PackageReference Include="qckdev.AspNetCore.Authentication.JwtBearer" Version="0.2.0-alpha" />
     <PackageReference Include="qckdev.AspNetCore.Mvc.Filters.IpSafe" Version="1.2.2" />

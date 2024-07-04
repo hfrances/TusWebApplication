@@ -4,6 +4,7 @@ using tusdotnet.Models;
 using System.Threading.Tasks;
 using tusdotnet.Interfaces;
 using System.Threading;
+using HeyRed.Mime;
 
 namespace TusWebApplication.TusAzure
 {
@@ -108,6 +109,25 @@ namespace TusWebApplication.TusAzure
             return commitOptions;
         }
 
+        /// <summary>
+        /// Returns the <paramref name="contentType"/>. If it is empty and <paramref name="contentTypeAuto"/> is true, 
+        /// returns the mime type according to the <paramref name="fileName"/> param.
+        /// </summary>
+        /// <param name="contentType">The content type.</param>
+        /// <param name="contentTypeAuto">True for calculate content type when <paramref name="contentType"/> is empty.</param>
+        /// <param name="fileName">File name to calculate the mime type if <paramref name="contentType"/> is empty and <paramref name="contentTypeAuto"/> is true.</param>
+        /// <returns>The content type specified or calculated.</returns>
+        public static string? GetContentType(string? contentType, bool? contentTypeAuto, string? fileName)
+        {
+            string? result = contentType;
+
+            if (string.IsNullOrWhiteSpace(contentType) && (contentTypeAuto == true) && !string.IsNullOrWhiteSpace(fileName))
+            {
+                result = MimeTypesMap.GetMimeType(fileName);
+            }
+            return result;
+        }
+        
     }
 
 }

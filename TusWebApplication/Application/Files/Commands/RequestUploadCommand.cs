@@ -30,6 +30,11 @@ namespace TusWebApplication.Application.Files.Commands
             public string? ContentType { get; set; }
 
             /// <summary>
+            /// When true and <see cref="ContentType"/> is empty, calculates the MIME content type automaticaly.
+            /// </summary>
+            public bool? ContentTypeAuto { get; set; }
+
+            /// <summary>
             /// Specifies the natural languages used by this resource.
             /// </summary>
             public string? ContentLanguage { get; set; }

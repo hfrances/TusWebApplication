@@ -10,6 +10,7 @@ namespace TusWebApplication.TusAzure.Authentication
         public string Blob { get; set; } = string.Empty;
         public string BlobId { get; set; } = string.Empty;
         public string? ContentType { get; set; }
+        public bool? ContentTypeAuto { get; set; }
         public string? ContentLanguage { get; set; }
         public bool Replace { get; set; }
         public long Size { get; set; }

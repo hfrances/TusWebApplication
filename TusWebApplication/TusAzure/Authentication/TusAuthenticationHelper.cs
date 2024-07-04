@@ -18,6 +18,7 @@ namespace TusWebApplication.TusAzure.Authentication
         const string CLAIMS_BLOB = "blob";
         const string CLAIMS_BLOBID = "blobId";
         const string CLAIMS_CONTENTTYPE = "content-type";
+        const string CLAIMS_CONTENTTYPEAUTO = "content-type-auto";
         const string CLAIMS_CONTENTLANGUAGE = "content-language";
         const string CLAIMS_REPLACE = "replace";
         const string CLAIMS_SIZE = "size";
@@ -82,6 +83,10 @@ namespace TusWebApplication.TusAzure.Authentication
             };
 
             // Optional claims.
+            if (properties.ContentTypeAuto != null)
+            {
+                claims.Add(new System.Security.Claims.Claim(CLAIMS_CONTENTTYPEAUTO, properties.ContentTypeAuto.Value.ToString()));
+            }
             if (properties.ContentLanguage != null)
             {
                 claims.Add(new System.Security.Claims.Claim(CLAIMS_CONTENTLANGUAGE, properties.ContentLanguage));
@@ -98,6 +103,7 @@ namespace TusWebApplication.TusAzure.Authentication
                 Blob = claims.Single(x => x.Type == CLAIMS_BLOB).Value,
                 BlobId = claims.Single(x => x.Type == CLAIMS_BLOBID).Value,
                 ContentType = claims.Single(x => x.Type == CLAIMS_CONTENTTYPE).Value,
+                ContentTypeAuto = bool.Parse(claims.SingleOrDefault(x => x.Type == CLAIMS_CONTENTTYPEAUTO)?.Value ?? bool.FalseString),
                 ContentLanguage = claims.SingleOrDefault(x => x.Type == CLAIMS_CONTENTLANGUAGE)?.Value,
                 Replace = bool.Parse(claims.Single(x => x.Type == CLAIMS_REPLACE).Value),
                 Size = long.Parse(claims.Single(x => x.Type == CLAIMS_SIZE).Value, System.Globalization.CultureInfo.InvariantCulture),

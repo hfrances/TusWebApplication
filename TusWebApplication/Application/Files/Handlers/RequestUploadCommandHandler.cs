@@ -60,6 +60,7 @@ namespace TusWebApplication.Application.Files.Handlers
                         Blob = blobName,
                         BlobId = blobId,
                         ContentType = request.Body.ContentType,
+                        ContentTypeAuto = request.Body.ContentTypeAuto,
                         ContentLanguage = request.Body.ContentLanguage,
                         Replace = request.Body.Replace,
                         Size = request.Body.Size,

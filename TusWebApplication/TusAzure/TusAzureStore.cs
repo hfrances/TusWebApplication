@@ -203,7 +203,7 @@ namespace TusWebApplication.TusAzure
                     // Create blob.
                     Blobs.Add(blobId, new BlobInfo(blobId, blob.BlobContainerName, blob.Name, fileName, metadata, uploadLength, useQueueAsync, blob)
                     {
-                        ContentType = properties.ContentType,
+                        ContentType = TusAzureHelper.GetContentType(properties.ContentType, properties.ContentTypeAuto, properties.FileName),
                         ContentLanguage = properties.ContentLanguage,
                         ValidateHash = properties.Hash
                     });
