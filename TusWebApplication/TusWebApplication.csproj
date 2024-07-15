@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-    <Version>3.3.0-alpha</Version>
-    <AssemblyVersion>3.3.0.0</AssemblyVersion>
+    <Version>3.3.1-alpha</Version>
+    <AssemblyVersion>3.3.1.0</AssemblyVersion>
     <Nullable>enable</Nullable>
     <Authors>hfrances</Authors>
     <PackageProjectUrl>https://github.com/hfrances/TusWebApplication</PackageProjectUrl>
@@ -35,6 +35,14 @@
     <Folder Include="Application\Common\Queries\" />
     <Folder Include="Properties\" />
     <Folder Include="TusAzure\Exceptions\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.Development2.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>
