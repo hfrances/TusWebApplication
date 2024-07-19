@@ -249,7 +249,7 @@ namespace TusConsoleApp
             /* Generate SAS */
             Uri sasUri, sasUriInline, sasUriAttachment;
             sasUri = client.GenerateSasUrl(new Uri(fileUrl), TimeSpan.FromMinutes(sasMinutes));
-            Console.WriteLine($"Created on:\t {details.CreatedOn.ToLocalTime()} ({details.CreatedOn})");
+            Console.WriteLine($"Created on:\t{details.CreatedOn.ToLocalTime()} ({details.CreatedOn})");
             Console.WriteLine($"Url SAS:\t{sasUri.OriginalString}");
             sasUriInline = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "true" } });
             Console.WriteLine($"        \t{sasUriInline.OriginalString}");
