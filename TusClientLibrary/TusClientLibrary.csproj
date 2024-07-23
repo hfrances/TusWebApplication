@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1;netstandard2.0;net461;net451;$(net45);$(net40);$(net35)</TargetFrameworks>
-    <Version>3.3.0-alpha</Version>
+    <Version>3.3.1-alpha</Version>
     <Authors>hfrances</Authors>
     <PackageProjectUrl>https://github.com/hfrances/TusWebApplication</PackageProjectUrl>
     <Description>Provides access to upload and download large files to Azure Blob Storage using TUS protocol.</Description>
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="qckdev.Net.Http" Version="1.2.2" />
+    <PackageReference Include="qckdev.Net.Http" Version="1.2.3" />
     <PackageReference Include="qckdev.Storage.TusDotNetClientSync" Version="1.2.0.1-alpha" />
   </ItemGroup>
 
