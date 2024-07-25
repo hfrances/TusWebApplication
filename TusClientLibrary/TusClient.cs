@@ -213,7 +213,7 @@ namespace TusClientLibrary
         /// <param name="expiresOn">The time during which the URL will be available.</param>
         /// <returns>An url that includes a temparl shared access signarute.</returns>
         public string GenerateSasUrl(string fileUrl, TimeSpan expiresOn)
-            => GenerateSasUrl(new Uri(this.BaseAddress, fileUrl), expiresOn).ToString();
+            => GenerateSasUrl(new Uri(this.BaseAddress, fileUrl), expiresOn).AbsoluteUri;
 
         /// <summary>
         /// Returns an url that includes a temporal shared access signature.

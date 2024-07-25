@@ -198,7 +198,7 @@ namespace TusClientLibrary
         /// <param name="expiresOn">The time during which the URL will be available.</param>
         /// <returns>An url that includes a temparl shared access signarute.</returns>
         public async Task<string> GenerateSasUrlAsync(string fileUrl, TimeSpan expiresOn)
-            => (await GenerateSasUrlAsync(new Uri(this.BaseAddress, fileUrl), expiresOn)).ToString();
+            => (await GenerateSasUrlAsync(new Uri(this.BaseAddress, fileUrl), expiresOn)).AbsoluteUri;
 
         /// <summary>
         /// Returns an url that includes a temporal shared access signature.
