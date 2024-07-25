@@ -250,11 +250,11 @@ namespace TusConsoleApp
             Uri sasUri, sasUriInline, sasUriAttachment;
             sasUri = client.GenerateSasUrl(new Uri(fileUrl), TimeSpan.FromMinutes(sasMinutes));
             Console.WriteLine($"Created on:\t{details.CreatedOn.ToLocalTime()} ({details.CreatedOn})");
-            Console.WriteLine($"Url SAS:\t{sasUri.OriginalString}");
+            Console.WriteLine($"Url SAS:\t{sasUri.AbsoluteUri}");
             sasUriInline = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "true" } });
-            Console.WriteLine($"        \t{sasUriInline.OriginalString}");
+            Console.WriteLine($"        \t{sasUriInline.AbsoluteUri}");
             sasUriAttachment = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "false" } });
-            Console.WriteLine($"        \t{sasUriAttachment.OriginalString}");
+            Console.WriteLine($"        \t{sasUriAttachment.AbsoluteUri}");
 
             /* Generate SAS of previous version (if exists) */
             var previousVersion = details.Versions?.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);

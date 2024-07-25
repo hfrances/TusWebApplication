@@ -15,14 +15,16 @@ namespace TusConsoleApp
     static class Program
     {
 
+#if NO_ASYNC
         static void Main(string[] args)
             => ProgramSync.Run(args);
+#else        
+        static void Main2(string[] args)
+            => ProgramSync.Run(args);
 
-#if NO_ASYNC
-#else
-        static System.Threading.Tasks.Task Main2(string[] args)
-        => ProgramAsync.Run(args);
-
+        static System.Threading.Tasks.Task Main(string[] args)
+            => ProgramAsync.Run(args);
 #endif
+
     }
 }
