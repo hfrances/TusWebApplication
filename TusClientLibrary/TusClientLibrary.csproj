@@ -23,12 +23,12 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(TargetFramework)'=='net6.0' or '$(TargetFramework)'=='netcoreapp3.1' or '$(TargetFramework)'=='netstandard2.0' or '$(TargetFramework)'=='net461'">
-    <PackageReference Include="qckdev.Storage.TusDotNetClient" Version="1.2.0.1" />
+    <PackageReference Include="qckdev.Storage.TusDotNetClient" Version="1.2.0.2" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="qckdev.Net.Http" Version="1.2.3" />
-    <PackageReference Include="qckdev.Storage.TusDotNetClientSync" Version="1.2.0.1-alpha" />
+    <PackageReference Include="qckdev.Storage.TusDotNetClientSync" Version="1.2.0.2" />
   </ItemGroup>
 
 </Project>
