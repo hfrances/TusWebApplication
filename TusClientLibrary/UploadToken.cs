@@ -2,7 +2,7 @@
 
 namespace TusClientLibrary
 {
-    public sealed class UploadToken
+    public class UploadToken
     {
 
         public string StoreName { get; set; }

@@ -74,7 +74,7 @@ namespace TusClientLibrary
         /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
         /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetails(string)"/>.</param>
         /// <returns>A <see cref="UploadToken"/> with the token necessary to upload a new file.</returns>
-        public UploadToken RequestUpload(
+        public RequestUploadToken RequestUpload(
             string storeName, string containerName,
             string fileName, long fileSize,
             string blobName = null, bool replace = false,
@@ -155,7 +155,7 @@ namespace TusClientLibrary
         /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
         /// <param name="useQueueAsync">Optional. When it is true, the process does not wait up to the file is stored in the target. It will requires to check status in <see cref="GetFileDetails(string)"/>.</param>
         /// <returns>A <see cref="UploadToken"/> with the token necessary to upload a new file.</returns>
-        public System.Threading.Tasks.Task<UploadToken> RequestUploadAsync(
+        public System.Threading.Tasks.Task<RequestUploadToken> RequestUploadAsync(
             string storeName, string containerName,
             string fileName, long fileSize,
             string blobName = null, bool replace = false,

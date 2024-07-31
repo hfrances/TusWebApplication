@@ -93,13 +93,13 @@ namespace TusClientLibrary
         /// <param name="replace">Optional. If the <paramref name="blobName"/> is set and a blob with the same name already exists, it is replaced. If blob versioning is enabled, it creates a new version.</param>
         /// <param name="options">Optional. Additional options for the file.</param>
         /// <returns>A <see cref="UploadToken"/> with the token necessary to upload a new file.</returns>
-        public async Task<UploadToken> RequestUploadAsync(
+        public async Task<RequestUploadToken> RequestUploadAsync(
             string storeName, string containerName,
             string fileName, long fileSize,
             string blobName = null, bool replace = false,
             RequestUploadOptions options = null)
         {
-            UploadToken uploadToken;
+            RequestUploadToken uploadToken;
             string path;
 
             try
@@ -123,7 +123,8 @@ namespace TusClientLibrary
                             useQueueAsync = options?.UseQueueAsync ?? false
                         },
                         AuthorizationToken.AccessToken
-                    ).FetchAsync<UploadToken, TusResponse>();
+                    ).FetchAsync<RequestUploadToken, TusResponse>();
+                uploadToken.RelativeUrl = UriHelper.GetRelativeFileUrl(uploadToken.StoreName);
                 return uploadToken;
             }
             catch (FetchFailedException<TusResponse> ex)
