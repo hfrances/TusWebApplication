@@ -314,8 +314,8 @@ namespace TusClientLibrary
                 }
                 return new TokenSas
                 {
-                    Url = uriBuilder?.Uri.ToString(),
-                    RelativeUrl = (uriBuilder != null ? BaseAddress.MakeRelativeUri(uriBuilder.Uri).ToString() : null)
+                    Url = uriBuilder?.Uri.AbsoluteUri,
+                    RelativeUrl = (uriBuilder != null ? BaseAddress.MakeRelativeUri(uriBuilder.Uri).OriginalString : null)
                 };
             });
         }
