@@ -72,11 +72,11 @@ namespace TusClientLibrary.Test
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
-                parts.GetRelativeUrl(withVersion: true)
+                parts.ToRelativeUrl(withVersion: true)
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba",
-                parts.GetRelativeUrl(withVersion: false)
+                parts.ToRelativeUrl(withVersion: false)
             );
         }
 
@@ -92,11 +92,11 @@ namespace TusClientLibrary.Test
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
-                parts.GetRelativeUrl(withVersion: true)
+                parts.ToRelativeUrl(withVersion: true)
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba",
-                parts.GetRelativeUrl(withVersion: false)
+                parts.ToRelativeUrl(withVersion: false)
             );
         }
 
@@ -112,7 +112,7 @@ namespace TusClientLibrary.Test
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba",
-                parts.GetRelativeUrl()
+                parts.ToRelativeUrl()
             );
         }
 
@@ -128,11 +128,11 @@ namespace TusClientLibrary.Test
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
-                parts.GetRelativeUrl(withVersion: true)
+                parts.ToRelativeUrl(withVersion: true)
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba",
-                parts.GetRelativeUrl(withVersion: false)
+                parts.ToRelativeUrl(withVersion: false)
             );
         }
 
@@ -148,11 +148,11 @@ namespace TusClientLibrary.Test
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z",
-                parts.GetRelativeUrl(withVersion: true)
+                parts.ToRelativeUrl(withVersion: true)
             );
             Assert.AreEqual(
                 "files/mystore/other/prueba",
-                parts.GetRelativeUrl(withVersion: false)
+                parts.ToRelativeUrl(withVersion: false)
             );
         }
 
@@ -165,6 +165,101 @@ namespace TusClientLibrary.Test
             Assert.AreEqual(
                 (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
                 ((Uri)null, "mystore", "other", "prueba", "other/prueba", (string)null)
+            );
+        }
+
+        [TestMethod]
+        public void ParseString_Relative_StoreAndBlobId()
+        {
+            FileUriParts parts;
+
+            parts = FileUriParts.Parse("mystore", "other/prueba");
+            Assert.AreEqual(
+                (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
+                ((Uri)null, "mystore", "other", "prueba", "other/prueba", (string)null)
+            );
+        }
+
+        [TestMethod]
+        public void ParseString_Absolute_StoreAndBlobId()
+        {
+            FileUriParts parts;
+
+            parts = FileUriParts.Parse(new Uri("https://localhost:5120/storage"), "mystore", "other/prueba");
+            Assert.AreEqual(
+                (parts.BasePath, parts.StoreName, parts.ContainerName, parts.BlobName, parts.BlobId, parts.VersionId),
+                (new Uri("https://localhost:5120/storage"), "mystore", "other", "prueba", "other/prueba", (string)null)
+            );
+        }
+
+        [TestMethod]
+        public void ToRelativeUrl_Relative()
+        {
+            FileUriParts parts;
+
+            parts = new FileUriParts { StoreName = "mystore", ContainerName = "other", BlobName = "prueba", VersionId = "2022-11-14T14:55:05.2489168Z" };
+            Assert.AreEqual(
+                parts.ToRelativeUrl(),
+                "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z"
+            );
+        }
+
+        [TestMethod]
+        public void ToRelativeUrl_Absolute()
+        {
+            FileUriParts parts;
+
+            parts = new FileUriParts { BasePath = new Uri("https://localhost:5120/storage"), StoreName = "mystore", ContainerName = "other", BlobName = "prueba", VersionId = "2022-11-14T14:55:05.2489168Z" };
+            Assert.AreEqual(
+                parts.ToRelativeUrl(),
+                "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z"
+            );
+        }
+
+        [TestMethod]
+        public void ToAbsoluteUrl_Relative()
+        {
+            FileUriParts parts;
+
+            parts = new FileUriParts { StoreName = "mystore", ContainerName = "other", BlobName = "prueba", VersionId = "2022-11-14T14:55:05.2489168Z" };
+            Assert.ThrowsException<ArgumentNullException>(() =>
+                parts.ToAbsoluteUrl()
+            );
+        }
+
+        [TestMethod]
+        public void ToAbsoluteUrl_Absolute()
+        {
+            FileUriParts parts;
+
+            parts = new FileUriParts { BasePath = new Uri("https://localhost:5120/storage"), StoreName = "mystore", ContainerName = "other", BlobName = "prueba", VersionId = "2022-11-14T14:55:05.2489168Z" };
+            Assert.AreEqual(
+                parts.ToAbsoluteUrl(),
+                "https://localhost:5120/files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z"
+            );
+        }
+
+        [TestMethod]
+        public void ToString_Relative()
+        {
+            FileUriParts parts;
+
+            parts = new FileUriParts { StoreName = "mystore", ContainerName = "other", BlobName = "prueba", VersionId = "2022-11-14T14:55:05.2489168Z" };
+            Assert.AreEqual(
+                parts.ToString(),
+                "files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z"
+            );
+        }
+
+        [TestMethod]
+        public void ToString_Absolute()
+        {
+            FileUriParts parts;
+
+            parts = new FileUriParts { BasePath = new Uri("https://localhost:5120/storage"), StoreName = "mystore", ContainerName = "other", BlobName = "prueba", VersionId = "2022-11-14T14:55:05.2489168Z" };
+            Assert.AreEqual(
+                parts.ToString(),
+                "https://localhost:5120/files/mystore/other/prueba?versionId=2022-11-14T14%3A55%3A05.2489168Z"
             );
         }
 
