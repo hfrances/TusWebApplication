@@ -43,12 +43,19 @@ namespace TusClientLibrary
         /// </summary>
         public string VersionId { get; set; }
 
+        /// <summary>
+        /// Gets the file relative url including <see cref="VersionId"/> if it was defined.
+        /// </summary>
+        /// <param name="withVersion">True for including <see cref="VersionId"/> (if it was defined). False for excluding it.</param>
+        [Obsolete("Use 'ToRelativeUrl(withVersion)' instead.", true)]
+        public string GetRelativeUrl(bool withVersion = true)
+            => ToRelativeUrl(withVersion);
 
         /// <summary>
         /// Gets the file relative url including <see cref="VersionId"/> if it was defined.
         /// </summary>
         /// <param name="withVersion">True for including <see cref="VersionId"/> (if it was defined). False for excluding it.</param>
-        public string GetRelativeUrl(bool withVersion = true)
+        public string ToRelativeUrl(bool withVersion = true)
         {
             string result;
 
@@ -60,6 +67,37 @@ namespace TusClientLibrary
             return result;
         }
 
+        /// <summary>
+        /// Gets the file relative url including <see cref="VersionId"/> if it was defined.
+        /// </summary>
+        /// <param name="withVersion">True for including <see cref="VersionId"/> (if it was defined). False for excluding it.</param>
+        public string ToAbsoluteUrl(bool withVersion = true)
+        {
+            string result;
+
+            result = new Uri(this.BasePath, UriHelper.GetRelativeFileUrl(this.StoreName, this.BlobId)).AbsoluteUri;
+            if (withVersion)
+            {
+                result = UriHelper.GetBlobUriWithVersion(result, this.VersionId);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Returns a <see cref="string"/> which represents the object instance.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="string"/> which represents the object instance.
+        /// </returns>
+        public override string ToString()
+        {
+            return this.BasePath == null ? 
+                ToRelativeUrl(withVersion: true) : 
+                ToAbsoluteUrl(withVersion: true)
+            ;
+        }
+
+        #region Parse
 
         /// <summary>
         /// Extracts all elements from a file <see cref="Uri"/>
@@ -105,6 +143,29 @@ namespace TusClientLibrary
             var fileUri = new Uri(fileUrl, UriKind.RelativeOrAbsolute);
 
             return Parse(fileUri);
+        }
+
+        /// <summary>
+        /// Returns a <see cref="FileUriParts"/> from an <paramref name="storeName"/> and a <paramref name="blobId"/>.
+        /// </summary>
+        /// <param name="storeName">The name of the store where the file is placed.</param>
+        /// /// <param name="blobId">The concatenation of the <see cref="ContainerName"/> and the <see cref="BlobName"/>.</param>
+        /// <returns></returns>
+        public static FileUriParts Parse(string storeName, string blobId)
+        {
+            return Parse(UriHelper.GetRelativeFileUrl(storeName, blobId));
+        }
+
+        /// <summary>
+        /// Returns a <see cref="FileUriParts"/> from an <paramref name="storeName"/> and a <paramref name="blobId"/>.
+        /// </summary>
+        /// <param name="basePath">The working base path.</param>
+        /// <param name="storeName">The name of the store where the file is placed.</param>
+        /// /// <param name="blobId">The concatenation of the <see cref="ContainerName"/> and the <see cref="BlobName"/>.</param>
+        /// <returns>A <see cref="FileUriParts"/> from an <paramref name="storeName"/> and a <paramref name="blobId"/>.</returns>
+        public static FileUriParts Parse(Uri basePath, string storeName, string blobId)
+        {
+            return Parse(basePath, new Uri(UriHelper.GetRelativeFileUrl(storeName, blobId), UriKind.Relative));
         }
 
         /// <summary>
@@ -168,6 +229,8 @@ namespace TusClientLibrary
             }
             return result;
         }
+
+        #endregion
 
     }
 }
