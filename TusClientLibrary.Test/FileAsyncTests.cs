@@ -250,7 +250,7 @@ namespace TusClientLibrary.Test
         private TusClient CreateTusClient()
         {
             return new TusClient(
-                HttpClient,
+                HttpClient.BaseAddress,
                 new TusClientCredentials
                 {
                     UserName = Settings.Security.Credentials.UserName,
