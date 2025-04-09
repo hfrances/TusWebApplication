@@ -50,13 +50,15 @@ namespace TusWebApplication.Controllers
                 Response.Headers.Add("X-Content-Type-Options", "nosniff");
                 return new FileStreamResult(fileInfo.CreateReadStream(), fileInfo.ContentType)
                 {
-                    EnableRangeProcessing = true
+                    EnableRangeProcessing = true,
+                    LastModified = fileInfo.LastModified,
+                    EntityTag = Microsoft.Net.Http.Headers.EntityTagHeaderValue.Any
                 };
             }
             else
             {
                 // Downloads the element directly.
-                return File(fileInfo.CreateReadStream(), fileInfo.ContentType, fileInfo.Name);
+                return File(fileInfo.CreateReadStream(), fileInfo.ContentType, fileInfo.Name, fileInfo.LastModified, Microsoft.Net.Http.Headers.EntityTagHeaderValue.Any);
             }
         }
 
