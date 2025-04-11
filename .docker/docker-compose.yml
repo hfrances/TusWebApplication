@@ -1,0 +1,21 @@
+name: TusWebApplication
+services:
+  nodeserver:
+    build:
+      context: ../
+      dockerfile: TusWebApplication/Dockerfile
+    ports:
+      - "5120:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - BasePath=/storage
+      - Logging__LogLevel__qckdev.AspNetCore.Mvc.Filters.IpSafe=Debug
+  nginx:
+    image: nginx:1.17-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "3000:3000"
+    restart: always
+    depends_on:
+      - nodeserver

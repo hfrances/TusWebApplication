@@ -1,7 +1,10 @@
-##
-FROM mcr.microsoft.com/dotnet/aspnet:6.0-alpine AS runtime
+ARG IMGFRAMEWORK=6.0
+ARG FRAMEWORK=net6.0
 
-ENV ASPNETCORE_URLS http://+:5000
+FROM mcr.microsoft.com/dotnet/aspnet:$IMGFRAMEWORK-alpine AS runtime
+ARG FRAMEWORK
+ENV ASPNETCORE_URLS=http://+:5000;http://+:80
+
 WORKDIR /app
-COPY ./net6.0 .
+COPY ./$FRAMEWORK .
 ENTRYPOINT ["dotnet", "TusWebApplication.dll"]

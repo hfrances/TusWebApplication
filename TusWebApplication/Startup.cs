@@ -12,14 +12,17 @@ using qckdev.Extensions.Configuration;
 using System;
 using System.Text;
 using System.Text.Json.Serialization;
+using TusWebApplication.Common;
 using TusWebApplication.Application;
 using TusWebApplication.Swagger;
 using TusWebApplication.TusAzure;
 using TusWebApplication.TusAzure.Authentication;
+using Microsoft.Extensions.Logging;
+using System.Reflection;
 
 namespace TusWebApplication
 {
-    
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -90,13 +93,12 @@ namespace TusWebApplication
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILogger<Startup> logger)
         {
-            var basePath = this.Configuration.GetSection("BasePath")?.Value ?? "/";
+            logger.LogInformation($"Assembly version: {Assembly.GetExecutingAssembly().GetName().Version}");
 
             app.UseCors();
-
-            app.UsePathBase(basePath);
+            app.UsePathBase();
             if (env.IsDevelopment() || env.IsStaging())
             {
                 app.UseDeveloperExceptionPage();
@@ -104,13 +106,14 @@ namespace TusWebApplication
             }
 
             app.UseRouting();
+            app.UseIpSafeFilter();
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseSerializedExceptionHandler();
-            
+
             app.UseTusAzure();
-            
+
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();

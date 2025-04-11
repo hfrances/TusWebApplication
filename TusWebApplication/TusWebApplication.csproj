@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-    <Version>3.3.1-alpha</Version>
-    <AssemblyVersion>3.3.1.0</AssemblyVersion>
+    <Version>3.4.0-alpha</Version>
+    <AssemblyVersion>3.4.0.0</AssemblyVersion>
     <Nullable>enable</Nullable>
     <Authors>hfrances</Authors>
     <PackageProjectUrl>https://github.com/hfrances/TusWebApplication</PackageProjectUrl>
@@ -15,18 +15,18 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.18.1" />
     <PackageReference Include="AutoMapper" Version="11.0.1" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.19.0" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.21.2" />
     <PackageReference Include="MediatR.Extensions.Microsoft.DependencyInjection" Version="10.0.1" />
-    <PackageReference Include="MimeTypesMap" Version="1.0.8" />
-    <PackageReference Include="qckdev.AspNetCore" Version="0.6.3" />
+    <PackageReference Include="MimeTypesMap" Version="1.0.9" />
+    <PackageReference Include="qckdev.AspNetCore" Version="1.0.0" />
     <PackageReference Include="qckdev.AspNetCore.Authentication.JwtBearer" Version="0.2.0-alpha" />
-    <PackageReference Include="qckdev.AspNetCore.Mvc.Filters.IpSafe" Version="1.2.2" />
-    <PackageReference Include="qckdev.Authentication.JwtBearer" Version="0.1.0-alpha" />
+    <PackageReference Include="qckdev.AspNetCore.Mvc.Filters.IpSafe" Version="1.3.0" />
+    <PackageReference Include="qckdev.Authentication.JwtBearer" Version="0.2.0-alpha.1" />
     <PackageReference Include="qckdev.Extensions.Configuration.Abstractions" Version="1.0.1" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />
     <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="6.0.1" />
     <PackageReference Include="System.Net.Http.Json" Version="6.0.1" />
-    <PackageReference Include="tusdotnet" Version="2.7.2" />
+    <PackageReference Include="tusdotnet" Version="2.8.1" />
   </ItemGroup>
 
   <ItemGroup>
