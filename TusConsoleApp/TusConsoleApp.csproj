@@ -18,7 +18,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mime" Version="2.3.5" />
+    <PackageReference Include="Mime" Version="3.7.0" />
     <PackageReference Include="qckdev" Version="0.4.0-beta" />
   </ItemGroup>
 
