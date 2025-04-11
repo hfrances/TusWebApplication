@@ -426,8 +426,10 @@ namespace TusClientLibrary
 
                 // Request.
                 await AuthorizeAsync();
-                await HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Delete, this.BaseAddress, requestUri.ToString())
-                    .FetchAsync<object, TusResponse>();
+                await HttpHelper.CreateHttpWebRequest(
+                        HttpRequestMethod.Delete, this.BaseAddress, requestUri.ToString(), null,
+                        AuthorizationToken.AccessToken
+                    ).FetchAsync<object, TusResponse>();
             }
             catch (FetchFailedException<TusResponse> ex)
             {

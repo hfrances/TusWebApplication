@@ -440,8 +440,10 @@ namespace TusClientLibrary
 
                 // Request.
                 Authorize();
-                HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Delete, this.BaseAddress, requestUri.ToString())
-                    .Fetch<object, TusResponse>();
+                HttpHelper.CreateHttpWebRequest(
+                        HttpRequestMethod.Delete, this.BaseAddress, requestUri.ToString(), null,
+                        AuthorizationToken.AccessToken
+                    ).Fetch<object, TusResponse>();
             }
             catch (FetchFailedException<TusResponse> ex)
             {
