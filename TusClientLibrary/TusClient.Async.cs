@@ -78,13 +78,13 @@ namespace TusClientLibrary
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
+                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
             }
-            catch (TusDotNetClient.TusException tusex) 
+            catch (TusDotNetClient.TusException tusex)
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
+                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
             }
         }
 
@@ -135,7 +135,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
             }
         }
 
@@ -406,7 +406,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
             }
         }
 
@@ -439,7 +439,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
             }
         }
 
@@ -471,14 +471,21 @@ namespace TusClientLibrary
         /// <returns>An authentication JWT token bearer.</returns>
         static async Task<Token> GetTokenAsync(Uri baseAddress, string userName, string login, string password)
         {
-            var token = await HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Post, baseAddress, "auth", new
+            try
             {
-                userName,
-                login,
-                password
-            }).FetchAsync<Token>();
-
-            return token;
+                var token = await HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Post, baseAddress, "auth", new
+                {
+                    userName,
+                    login,
+                    password
+                }).FetchAsync<Token, TusResponse>();
+                return token;
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                //error.LoginFailed
+                throw;
+            }
         }
 
     }

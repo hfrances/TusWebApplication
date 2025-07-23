@@ -93,13 +93,13 @@ namespace TusClientLibrary
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
+                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
             }
             catch (TusDotNetClientSync.TusException tusex)
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
+                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
             }
         }
 
@@ -150,7 +150,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
             }
         }
 
@@ -420,7 +420,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
             }
         }
 
@@ -453,7 +453,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exception(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
             }
         }
 
@@ -485,14 +485,25 @@ namespace TusClientLibrary
         /// <returns>An authentication JWT token bearer.</returns>
         static Token GetToken(Uri baseAddress, string userName, string login, string password)
         {
-            var token = HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Post, baseAddress, "auth", new
+            try
             {
-                userName,
-                login,
-                password
-            }).Fetch<Token>();
 
-            return token;
+                var token = HttpHelper.CreateHttpWebRequest(HttpRequestMethod.Post, baseAddress, "auth", new
+                {
+                    userName,
+                    login,
+                    password
+                }).Fetch<Token, TusResponse>();
+                return token;
+            }
+            catch (FetchFailedException<TusResponse> ex) when (ex.Error?.Error?.Message == "error.LoginFailed")
+            {
+                throw new Exceptions.LoginException(ex.Error?.Error?.Message ?? ex.Message, ex);
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
+            }
         }
 
     }

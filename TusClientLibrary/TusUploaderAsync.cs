@@ -85,7 +85,7 @@ namespace TusClientLibrary
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
+                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
             }
         }
 
