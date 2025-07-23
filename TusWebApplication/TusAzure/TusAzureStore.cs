@@ -196,7 +196,7 @@ namespace TusWebApplication.TusAzure
 
                         if (allowReplace != true)
                         {
-                            throw new ArgumentException($"Blob {this.StoreName}/{blobId} already exists. Set 'replace' argument to overwrite it.");
+                            throw new Exceptions.BlobAlreadyExistsException(this.StoreName, blobId);
                         }
                     }
 

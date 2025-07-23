@@ -90,7 +90,7 @@ namespace TusClientLibrary
         #endregion
 
 
-#region Async
+        #region Async
 #if NO_ASYNC
 #else
         /// <summary>
@@ -168,7 +168,7 @@ namespace TusClientLibrary
             });
         }
 #endif
-#endregion
+        #endregion
 
     }
 }

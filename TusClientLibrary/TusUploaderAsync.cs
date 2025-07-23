@@ -81,7 +81,7 @@ namespace TusClientLibrary
             {
                 await uploadOperation;
             }
-            catch (AggregateException ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
+            catch (Exception ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 

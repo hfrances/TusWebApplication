@@ -74,7 +74,13 @@ namespace TusClientLibrary
                 );
                 return new TusUploaderAsync(this.BaseAddress, tusClient, uploadToken, fileUrl);
             }
-            catch (AggregateException ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
+            catch (Exception ex) when (ex.InnerException is TusDotNetClient.TusException tusex)
+            {
+                var response = TusHelper.ParseResponse(tusex.ResponseContent);
+
+                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
+            }
+            catch (TusDotNetClient.TusException tusex) 
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 

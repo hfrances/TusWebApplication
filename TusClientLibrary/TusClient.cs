@@ -95,6 +95,12 @@ namespace TusClientLibrary
 
                 throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
             }
+            catch (TusDotNetClientSync.TusException tusex)
+            {
+                var response = TusHelper.ParseResponse(tusex.ResponseContent);
+
+                throw new Exception(response?.Error?.Message ?? tusex.Message, tusex);
+            }
         }
 
         /// <summary>

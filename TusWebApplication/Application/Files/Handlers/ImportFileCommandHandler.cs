@@ -4,7 +4,6 @@ using MediatR;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using TusWebApplication.Application.Files.Commands;
@@ -64,7 +63,7 @@ namespace TusWebApplication.Application.Files.Handlers
                                 {
                                     CopySourceTagsMode = BlobCopySourceTagsMode.Copy,
                                     Tags = null, // Not set here because then it not imports orginal tags.
-                                    Metadata = null // Not set here because then it not imports original metadatas,
+                                    Metadata = null, // Not set here because then it not imports original metadatas,
                                 };
 
                                 newBlob = container.GetBlobClient(request.Body.TargetBlobName);
@@ -76,7 +75,7 @@ namespace TusWebApplication.Application.Files.Handlers
                                 }
                                 else
                                 {
-                                    BlobProperties properties = await blob.GetPropertiesAsync();
+                                    BlobProperties properties = await newBlob.GetPropertiesAsync();
 
                                     var task =
                                         copy.WaitForCompletionAsync(cancellationToken)
@@ -98,15 +97,22 @@ namespace TusWebApplication.Application.Files.Handlers
                                                     bool metadataModified, tagsModified;
                                                     var currentMetadata = properties.Metadata;
                                                     var finalMetadata = MergeMetadata(currentMetadata, request.Body.FileName, request.Body.Metadata, out metadataModified);
-                                                    var currentTags = (await blob.GetTagsAsync()).Value.Tags;
+                                                    var currentTags = (await blob.GetTagsAsync(cancellationToken: cancellationToken)).Value.Tags;
                                                     var finalTags = MergeTags(currentTags, request.Body.Tags, out tagsModified);
 
                                                     if (!string.IsNullOrWhiteSpace(request.Body.ContentType))
                                                     {
+                                                        var newProperties = (await newBlob.GetPropertiesAsync(cancellationToken: cancellationToken)).Value;
+
                                                         responseBlob = await newBlob.SetHttpHeadersAsync(new BlobHttpHeaders
                                                         {
+                                                            CacheControl = newProperties.CacheControl,
+                                                            ContentDisposition = newProperties.ContentDisposition,
+                                                            ContentEncoding = newProperties.ContentEncoding,
+                                                            ContentLanguage = newProperties.ContentLanguage,
+                                                            ContentHash = newProperties.ContentHash,
                                                             ContentType = request.Body.ContentType,
-                                                        });
+                                                        }, cancellationToken: cancellationToken);
                                                         responseRaw = responseBlob.GetRawResponse();
                                                         if (responseRaw.IsError)
                                                         {
@@ -115,7 +121,7 @@ namespace TusWebApplication.Application.Files.Handlers
                                                     }
                                                     if (metadataModified)
                                                     {
-                                                        responseBlob = await blob.SetMetadataAsync(finalMetadata);
+                                                        responseBlob = await newBlob.SetMetadataAsync(finalMetadata, cancellationToken: cancellationToken);
                                                         responseRaw = responseBlob.GetRawResponse();
                                                         if (responseRaw.IsError)
                                                         {
@@ -124,7 +130,7 @@ namespace TusWebApplication.Application.Files.Handlers
                                                     }
                                                     if (tagsModified)
                                                     {
-                                                        responseRaw = await blob.SetTagsAsync(finalTags);
+                                                        responseRaw = await newBlob.SetTagsAsync(finalTags, cancellationToken: cancellationToken);
                                                         if (responseRaw.IsError)
                                                         {
                                                             throw new Exception(responseRaw.ReasonPhrase);
@@ -155,6 +161,22 @@ namespace TusWebApplication.Application.Files.Handlers
                 {
                     throw new Exceptions.BlobStorageNotFoundException();
                 }
+            }
+            catch (Exceptions.BlobStorageNotFoundException)
+            {
+                throw;
+            }
+            catch (Exceptions.ContainerNotFoundException)
+            {
+                throw;
+            }
+            catch (Exceptions.BlobAlreadyExistsException)
+            {
+                throw;
+            }
+            catch (Azure.RequestFailedException ex)
+            {
+                throw Helpers.ExeptionHelper.CreateException(ex);
             }
             catch (qckdev.AspNetCore.HttpHandledException ex)
             {
