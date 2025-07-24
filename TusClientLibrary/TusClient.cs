@@ -220,7 +220,7 @@ namespace TusClientLibrary
         /// <param name="expiresOn">The time during which the URL will be available.</param>
         /// <returns>An url that includes a temparl shared access signarute.</returns>
         public string GenerateSasUrl(string fileUrl, TimeSpan expiresOn)
-            => GenerateSasUrl(new Uri(this.BaseAddress, fileUrl), expiresOn).AbsoluteUri;
+            => GenerateSasUrl(new Uri(this.BaseAddress, fileUrl), expiresOn).OriginalString;
 
         /// <summary>
         /// Returns an url that includes a temporal shared access signature.
@@ -230,39 +230,65 @@ namespace TusClientLibrary
         /// <returns>An url that includes a temparl shared access signarute.</returns>
         public Uri GenerateSasUrl(Uri fileUri, TimeSpan expiresOn)
         {
-            UriBuilder requestUri;
-            UriBuilder result;
-            IDictionary<string, string> queryParameters, queryParametersSas;
-            string tokenSas;
+            Uri GetAbsoluteOrRelativeUri(Uri absoluteOrRelativeUri, string[] subpaths, Func<Uri, string, string, Uri> predicate)
+            {
+                UriBuilder builder;
 
-            /* Authorize */
+                if (absoluteOrRelativeUri.IsAbsoluteUri)
+                {
+                    string path;
+
+                    builder = new UriBuilder(absoluteOrRelativeUri); // La url solicitada
+                    path = UriHelper.AppendPath(builder.Uri.GetLeftPart(UriPartial.Path).TrimEnd('/'), subpaths); // la url del resquest que debe hacer
+                    return predicate(builder.Uri, path, builder.Query); // La url solicitada con los 
+                }
+                else
+                {
+                    string path;
+                    var baseUri = new Uri("http://localhost");
+                    var tmpUri = new Uri(baseUri, absoluteOrRelativeUri);
+                    Uri outputUri;
+
+                    builder = new UriBuilder(tmpUri)
+                    {
+                        Query = tmpUri.Query
+                    };
+                    path = UriHelper.AppendPath(builder.Path.TrimEnd('/'), subpaths);
+                    outputUri = predicate(builder.Uri, path, builder.Query);
+                    return baseUri.MakeRelativeUri(outputUri);
+                }
+            }
+
+            /* Authorize. */
             Authorize();
 
             /* Actions */
-            requestUri = new UriBuilder($"{fileUri.GetLeftPart(UriPartial.Path)}/sas")
+            return GetAbsoluteOrRelativeUri(fileUri, new[] { "sas" }, (requestUri, path, query) =>
             {
-                Query = fileUri.Query
-            };
+                UriBuilder result;
+                IDictionary<string, string> queryParameters, queryParametersSas;
+                string tokenSas;
 
-            // Get URL queries, original and SAS token and merge them for the result.
-            queryParameters = HttpHelper.ParseQueryString(fileUri.Query);
-            tokenSas = HttpHelper.CreateHttpWebRequest(
-                    HttpRequestMethod.Post, this.BaseAddress, requestUri.Uri.ToString(), new
-                    {
-                        expiresOn = DateTimeOffset.UtcNow.Add(expiresOn)
-                    },
-                    this.AuthorizationToken.AccessToken
-                ).Fetch<string>();
-            queryParametersSas = HttpHelper.ParseQueryString(tokenSas);
-            foreach (var parameter in queryParametersSas)
-            {
-                queryParameters[parameter.Key] = parameter.Value;
-            }
-            result = new UriBuilder(fileUri)
-            {
-                Query = HttpHelper.BuildQueryString(queryParameters)
-            };
-            return result.Uri;
+                // Get URL queries, original and SAS token and merge them for the result.
+                queryParameters = HttpHelper.ParseQueryString(query);
+                tokenSas = HttpHelper.CreateHttpWebRequest(
+                        HttpRequestMethod.Post, this.BaseAddress, path.TrimStart('/'), new
+                        {
+                            expiresOn = DateTimeOffset.Now.Add(expiresOn)
+                        },
+                        AuthorizationToken.AccessToken
+                    ).Fetch<string>();
+                queryParametersSas = HttpHelper.ParseQueryString(tokenSas);
+                foreach (var parameter in queryParametersSas)
+                {
+                    queryParameters[parameter.Key] = parameter.Value;
+                }
+                result = new UriBuilder(requestUri)
+                {
+                    Query = HttpHelper.BuildQueryString(queryParameters)
+                };
+                return result.Uri;
+            });
         }
 
         /// <summary>

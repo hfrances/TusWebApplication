@@ -196,7 +196,7 @@ namespace TusClientLibrary
                 Uri absoluteUri;
 
                 // Relative Uri: cannot use any property excepting the "original string".
-                relativeUrl = UriHelper.ExtractParametersFromUri(fileUri.OriginalString, out versionId, out _);
+                relativeUrl = UriHelper.ExtractVersionFromUri(fileUri.OriginalString, out versionId, out _);
                 absoluteUri = new Uri(new Uri("http://localhost"), relativeUrl);
                 split = absoluteUri.AbsolutePath.Split('/'); // Extract path (without query).
             }

@@ -16,11 +16,19 @@ namespace TusClientLibrary
 
 
         /// <summary>
+        /// Returns the <paramref name="basePath"/> with the added <paramref name="subpaths"/>.
+        /// </summary>
+        /// <param name="basePath">Base path of the "file" url. Example: /api/v1.</param>
+        /// <param name="subpaths">Sub paths of the "file" url. Example: file/subpath1/subpath2.</param>
+        public static string AppendPath(string basePath, params string[] subpaths)
+            => string.Join("/", Enumerable.Union(new[] { basePath }, (subpaths ?? new string[] { })).ToArray());
+
+        /// <summary>
         /// Returns a path for "file" controller.
         /// </summary>
         /// <param name="subpaths">Sub paths of the "file" url. Example: file/subpath1/subpath2.</param>
         public static string GetRelativeFileUrl(params string[] subpaths)
-            => string.Join("/", Enumerable.Union(new[] { FILES_PATH }, (subpaths ?? new string[] { })).ToArray());
+            => AppendPath(FILES_PATH, subpaths);
 
         /// <summary>
         /// Returns a path with the version and the includeVersions query parameters.
@@ -92,7 +100,7 @@ namespace TusClientLibrary
         /// <param name="versionId">Output parameter with the "version" query value, or null if it is not present.</param>
         /// <param name="includeVersions">Output parameter with the "includeVersions" query value, or null if it is not present.</param>
         /// <returns>The original <see cref="Uri"/> without "version" and "includeVersions" query parameters.</returns>
-        public static string ExtractParametersFromUri(string fileUrl, out string versionId, out bool? includeVersions)
+        public static string ExtractVersionFromUri(string fileUrl, out string versionId, out bool? includeVersions)
         {
             var baseUri = new Uri("http://localhost");
             var fileUri = new Uri(baseUri, fileUrl);
@@ -158,7 +166,5 @@ namespace TusClientLibrary
             return requestUri.Uri;
         }
 
-
     }
-
 }
