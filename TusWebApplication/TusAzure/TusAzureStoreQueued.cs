@@ -153,6 +153,13 @@ namespace TusWebApplication.TusAzure
                         Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
                     }
                 }
+                catch (Azure.RequestFailedException ex)
+                {
+                    blobInfo.Error = ex;
+                    Logger.LogError(ex, $"FileId: {this.StoreName}/{blobInfo.FileId}. ThreadId: {threadId}. ERROR: {ex.Message}. Elapsed time: {DateTime.Now - blobInfo.StartTime}");
+
+                    throw AzureExceptions.AzureExeptionHelper.CreateException(ex);
+                }
                 catch (Exception ex)
                 {
                     blobInfo.Error = ex;

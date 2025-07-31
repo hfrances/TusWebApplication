@@ -89,7 +89,6 @@ namespace TusWebApplication.TusAzure
             foreach (var (key, value) in metadataParsed)
             {
                 var stringValue = value.GetString(System.Text.Encoding.UTF8);
-                var stringValueFixed = Uri.EscapeDataString(stringValue);
 
                 if (key.StartsWith("BLOB:", StringComparison.OrdinalIgnoreCase))
                 {
@@ -97,10 +96,15 @@ namespace TusWebApplication.TusAzure
                 }
                 else if (key.StartsWith("TAG:", StringComparison.OrdinalIgnoreCase))
                 {
-                    commitOptions.Tags.Add(key[4..], stringValueFixed);
+                    // I removed stringValueFixed because it was failing on the following scenario:
+                    // tag with space running on netcoreapp3.1
+                    // I added stringValueFixed in the past because I got some error.
+                    // Maybe it is only necessary for metadata but not for tag?
+                    commitOptions.Tags.Add(key[4..], stringValue);
                 }
                 else
                 {
+                    var stringValueFixed = Uri.EscapeDataString(stringValue);
                     commitOptions.Metadata.Add(key, stringValueFixed);
                 }
             }
@@ -127,7 +131,7 @@ namespace TusWebApplication.TusAzure
             }
             return result;
         }
-        
+
     }
 
 }

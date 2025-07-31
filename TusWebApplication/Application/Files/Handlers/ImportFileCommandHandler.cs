@@ -176,7 +176,7 @@ namespace TusWebApplication.Application.Files.Handlers
             }
             catch (Azure.RequestFailedException ex)
             {
-                throw Helpers.ExeptionHelper.CreateException(ex);
+                throw AzureExceptions.AzureExeptionHelper.CreateException(ex);
             }
             catch (qckdev.AspNetCore.HttpHandledException ex)
             {

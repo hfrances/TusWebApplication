@@ -87,6 +87,12 @@ namespace TusClientLibrary
 
                 throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
             }
+            catch (TusDotNetClient.TusException tusex)
+            {
+                var response = TusHelper.ParseResponse(tusex.ResponseContent);
+
+                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
+            }
         }
 
         /// <summary>
