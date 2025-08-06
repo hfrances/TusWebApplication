@@ -71,11 +71,11 @@ namespace TusWebApplication.Application.Files.Handlers
             }
             catch (qckdev.AspNetCore.HttpHandledException ex)
             {
-                throw new Exceptions.ImportBlobException(ex);
+                throw new Exceptions.DeleteBlobException(ex);
             }
             catch (Exception ex)
             {
-                throw new Exceptions.ImportBlobException(ex);
+                throw new Exceptions.DeleteBlobException(ex);
             }
         }
 
