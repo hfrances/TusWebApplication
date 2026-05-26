@@ -99,7 +99,7 @@ namespace TusWebApplication
 
             app.UseCors();
             app.UsePathBase();
-            if (env.IsDevelopment() || env.IsStaging())
+            if (env.IsDevelopment() || env.IsDocker() || env.IsStaging())
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();

@@ -15,6 +15,7 @@ ARG FRAMEWORK
 ARG RELATIVEPATH
 WORKDIR /src/${RELATIVEPATH}
 COPY ["TusWebApplication/TusWebApplication.csproj", "TusWebApplication/"]
+COPY ["nuget.config*", "nuget.config"]
 COPY ["nuget.config.docker*", "nuget.config"]
 RUN dotnet restore "TusWebApplication/TusWebApplication.csproj" --configfile "nuget.config"
 WORKDIR /src

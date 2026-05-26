@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using System;
 using System.Linq;
 
@@ -25,6 +26,11 @@ namespace TusWebApplication.Common
                 app.UsePathBase(basePath);
             }
             return app;
+        }
+
+        public static bool IsDocker(this IHostEnvironment env)
+        {
+            return string.Equals(env.EnvironmentName, "Docker", StringComparison.OrdinalIgnoreCase);
         }
 
     }
