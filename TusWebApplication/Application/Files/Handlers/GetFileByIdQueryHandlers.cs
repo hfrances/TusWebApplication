@@ -92,9 +92,10 @@ namespace TusWebApplication.Application.Files.Handlers
                                 null :
                                 Convert.ToBase64String(properties.ContentHash),
                             Length = properties.ContentLength,
+                            Status = (FileDto.UploadStatus?)internalBlob?.Status ?? FileDto.UploadStatus.Done, // TODO: revisar
                             CreatedOn = properties.CreatedOn,
                             VersionId = properties.VersionId,
-                            Versions = blobVersions
+                            Versions = blobVersions,
                         };
                     }
                 },

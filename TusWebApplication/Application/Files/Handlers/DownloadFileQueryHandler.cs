@@ -39,11 +39,11 @@ namespace TusWebApplication.Application.Files.Handlers
                         async (blob, _) => {
                             var properties = (await blob.GetPropertiesAsync(cancellationToken: cancellationToken)).Value;
                             var containerAccessPolicy = (await container.GetAccessPolicyAsync()).Value.BlobPublicAccess;
-                            var useSas = (blob.CanGenerateSasUri && containerAccessPolicy == Azure.Storage.Blobs.Models.PublicAccessType.None);
+                            var useSas = (containerAccessPolicy == Azure.Storage.Blobs.Models.PublicAccessType.None);
                             string subPath;
 
                             Logger.LogInformation($"Requested SAS token for {request.StoreName}/{request.ContainerName}/{request.BlobName}. Request: {request.Parameters?.Se}; Current: {DateTimeOffset.UtcNow}; Difference: {request.Parameters?.Se - DateTimeOffset.UtcNow}");
-                            SasHelper.ValidateSasHash(request.Parameters?.Sv, request.Parameters?.Se, request.Parameters?.Sig, blob, properties, useSas);
+                            SasHelper.ValidateSasHash(request.Parameters?.Sv, request.Parameters?.Se, request.Parameters?.Sig, blob, properties, request.Parameters?.VersionId, useSas);
                             subPath = $"{request.StoreName}/{request.ContainerName}/{request.BlobName}";
                             if (!string.IsNullOrWhiteSpace(request.Parameters?.VersionId))
                             {

@@ -261,6 +261,11 @@ namespace TusConsoleApp
             sasUriAttachment = sasUri.WithQueryValues(new Dictionary<string, string>() { { "inline", "false" } });
             Console.WriteLine($"        \t{sasUriAttachment.OriginalString}");
 
+            /* Generate SAS (array) */
+            var sasUriArr = await client.GenerateSasUrlAsync(new string[] { fileUrl }, TimeSpan.FromMinutes(sasMinutes));
+            Console.WriteLine($"Url SAS (Array):");
+            Console.WriteLine($"        \t{sasUriArr.First().Url}");
+
             /* Generate SAS of previous version (if exists) */
             var previousVersion = details.Versions?.OrderByDescending(x => x.CreatedOn).FirstOrDefault(x => x.VersionId != details.VersionId);
 

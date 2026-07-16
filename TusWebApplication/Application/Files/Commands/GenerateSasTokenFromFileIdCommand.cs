@@ -17,6 +17,7 @@ namespace TusWebApplication.Application.Files.Commands
             /// Gets or sets the specific version of the blob.
             /// </summary>
             public string? VersionId { get; set; }
+
         }
 
         public string StoreName { get; set; } = string.Empty;

@@ -14,7 +14,7 @@ namespace TusWebApplication.Application.Files.Helpers
         static readonly SHA256 ShaHash = SHA256.Create();
 
 
-        public static string GenerateSasString(DateTimeOffset expiresOn, BlobClient blob, BlobProperties properties, string? versionId)
+        public static string GenerateSasString(DateTimeOffset expiresOn, BlobClient blob, string? versionId, BlobProperties properties)
         {
             var token = GenerateSasHash(expiresOn, blob, properties);
             var query = new Dictionary<string, string?>();
@@ -25,6 +25,23 @@ namespace TusWebApplication.Application.Files.Helpers
                 query.Add("versionId", versionId);
             }
             query.Add("sv", "1");
+            query.Add("se", expiresOn.ToString("O"));
+            query.Add("sig", token);
+            queryString = QueryHelpers.AddQueryString("", query);
+            return queryString.Substring(1); // Remove "?"
+        }
+
+        public static string GenerateSasString(DateTimeOffset expiresOn, BlobClient blob, string? versionId)
+        {
+            var token = GenerateSasHash(expiresOn, blob, versionId);
+            var query = new Dictionary<string, string?>();
+            string queryString;
+
+            if (versionId != null)
+            {
+                query.Add("versionId", versionId);
+            }
+            query.Add("sv", "2");
             query.Add("se", expiresOn.ToString("O"));
             query.Add("sig", token);
             queryString = QueryHelpers.AddQueryString("", query);
@@ -45,7 +62,21 @@ namespace TusWebApplication.Application.Files.Helpers
             return GetSha256Hash(ShaHash, builder.ToString());
         }
 
-        public static void ValidateSasHash(string? sasVersion, DateTimeOffset? expiresOn, string? sig, BlobClient blob, BlobProperties properties, bool useSas)
+        public static string GenerateSasHash(DateTimeOffset expiresOn, BlobClient blob, string? versionId)
+        {
+            var builder = new StringBuilder();
+
+            builder.Append(blob.BlobContainerName);
+            builder.Append(blob.Name);
+            builder.Append(DateTime.MinValue.ToString("s"));
+            builder.Append(string.Empty);
+            builder.Append(versionId);
+            builder.Append(expiresOn.ToString("s"));
+
+            return GetSha256Hash(ShaHash, builder.ToString());
+        }
+
+        public static void ValidateSasHash(string? sasVersion, DateTimeOffset? expiresOn, string? sig, BlobClient blob, BlobProperties properties, string? versionId, bool useSas)
         {
 
             if (sasVersion != null || expiresOn != null || sig != null)
@@ -59,9 +90,17 @@ namespace TusWebApplication.Application.Files.Helpers
                     switch (sasVersion)
                     {
                         case "1":
-                            var internalSig = GenerateSasHash(expiresOn.Value, blob, properties);
+                            var internalSig1 = GenerateSasHash(expiresOn.Value, blob, properties);
 
-                            if (internalSig != sig)
+                            if (internalSig1 != sig)
+                            {
+                                throw new Exceptions.InvalidSasTokenException("Signature did not match.");
+                            }
+                            break;
+                        case "2":
+                            var internalSig2 = GenerateSasHash(expiresOn.Value, blob, versionId);
+
+                            if (internalSig2 != sig)
                             {
                                 throw new Exceptions.InvalidSasTokenException("Signature did not match.");
                             }
