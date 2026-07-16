@@ -95,7 +95,7 @@ namespace TusWebApplication.Application.Files.Helpers
                 }
                 else
                 {
-                    throw new qckdev.AspNetCore.HttpHandledException(System.Net.HttpStatusCode.NotFound, "Blob not found");
+                    throw new Exceptions.BlobNotFoundException();
                 }
             }
             else
@@ -121,7 +121,7 @@ namespace TusWebApplication.Application.Files.Helpers
             }
             else if (blobStatus.Status == BlobStatus.UploadStatus.Uploading)
             {
-                throw new qckdev.AspNetCore.HttpHandledException(System.Net.HttpStatusCode.InternalServerError, "Blob is not ready yet.");
+                throw new Exceptions.BlobNotReadyException();
             }
             else if (blobStatus.Status == BlobStatus.UploadStatus.Error)
             {
@@ -129,7 +129,7 @@ namespace TusWebApplication.Application.Files.Helpers
             }
             else
             {
-                throw new qckdev.AspNetCore.HttpHandledException(System.Net.HttpStatusCode.NotFound, "Blob not found");
+                throw new Exceptions.BlobNotFoundException();
             }
         }
 

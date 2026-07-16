@@ -150,7 +150,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw TusHelper.CreateHandledException(ex, storeName, containerName, blobName);
             }
         }
 
@@ -200,17 +200,23 @@ namespace TusClientLibrary
         /// <returns>A <see cref="FileDetails"/> with the information about the blob.</returns>
         public FileDetails GetFileDetails(string fileUrl, string versionId, bool includeVersions = false)
         {
-            FileDetails result;
             var fileUri = new Uri(this.BaseAddress, fileUrl);
+            var fileParts = FileUriParts.Parse(this.BaseAddress, fileUri);
             Uri requestUri = UriHelper.GetBlobUriWithVersion(fileUri, "details", versionId, includeVersions);
 
-            // Request.
-            Authorize();
-            result = HttpHelper.CreateHttpWebRequest(
-                    HttpRequestMethod.Get, this.BaseAddress, requestUri.ToString(),
-                    tokenBearer: AuthorizationToken.AccessToken
-                ).Fetch<FileDetails>();
-            return result;
+            try
+            {
+                // Request.
+                Authorize();
+                return HttpHelper.CreateHttpWebRequest(
+                        HttpRequestMethod.Get, this.BaseAddress, requestUri.ToString(),
+                        tokenBearer: AuthorizationToken.AccessToken
+                    ).Fetch<FileDetails, TusResponse>();
+            }
+            catch (FetchFailedException<TusResponse> ex)
+            {
+                throw TusHelper.CreateHandledException(ex, fileParts.StoreName, fileParts.ContainerName, fileParts.BlobName);
+            }
         }
 
         /// <summary>
@@ -230,6 +236,8 @@ namespace TusClientLibrary
         /// <returns>An url that includes a temparl shared access signarute.</returns>
         public Uri GenerateSasUrl(Uri fileUri, TimeSpan expiresOn)
         {
+            var fileParts = FileUriParts.Parse(this.BaseAddress, fileUri);
+
             Uri GetAbsoluteOrRelativeUri(Uri absoluteOrRelativeUri, string[] subpaths, Func<Uri, string, string, Uri> predicate)
             {
                 UriBuilder builder;
@@ -271,13 +279,20 @@ namespace TusClientLibrary
 
                 // Get URL queries, original and SAS token and merge them for the result.
                 queryParameters = HttpHelper.ParseQueryString(query);
-                tokenSas = HttpHelper.CreateHttpWebRequest(
-                        HttpRequestMethod.Post, this.BaseAddress, path.TrimStart('/'), new
-                        {
-                            expiresOn = DateTimeOffset.Now.Add(expiresOn)
-                        },
-                        AuthorizationToken.AccessToken
-                    ).Fetch<string>();
+                try
+                {
+                    tokenSas = HttpHelper.CreateHttpWebRequest(
+                            HttpRequestMethod.Post, this.BaseAddress, path.TrimStart('/'), new
+                            {
+                                expiresOn = DateTimeOffset.Now.Add(expiresOn)
+                            },
+                            AuthorizationToken.AccessToken
+                        ).Fetch<string, TusResponse>();
+                }
+                catch (FetchFailedException<TusResponse> ex)
+                {
+                    throw TusHelper.CreateHandledException(ex, fileParts.StoreName, fileParts.ContainerName, fileParts.BlobName);
+                }
                 queryParametersSas = HttpHelper.ParseQueryString(tokenSas);
                 foreach (var parameter in queryParametersSas)
                 {
@@ -310,17 +325,24 @@ namespace TusClientLibrary
             // Generate tokens for each container and store.
             foreach (var group in fileParts)
             {
-                var response
-                    = HttpHelper.CreateHttpWebRequest(
-                        HttpRequestMethod.Post, this.BaseAddress, UriHelper.GetRelativeFileUrl(group.Key.StoreName, group.Key.ContainerName, "sas"),
-                        new
-                        {
-                            expiresOn = DateTimeOffset.Now.Add(expiresOn),
-                            blobs = group.Select(x => new { x.Parts.BlobName, x.Parts.VersionId })
-                        },
-                        AuthorizationToken.AccessToken
-                    ).Fetch<IEnumerable<TokenSasPrivate>>();
-                tokenSasList.AddRange(response);
+                try
+                {
+                    var response
+                        = HttpHelper.CreateHttpWebRequest(
+                            HttpRequestMethod.Post, this.BaseAddress, UriHelper.GetRelativeFileUrl(group.Key.StoreName, group.Key.ContainerName, "sas"),
+                            new
+                            {
+                                expiresOn = DateTimeOffset.Now.Add(expiresOn),
+                                blobs = group.Select(x => new { x.Parts.BlobName, x.Parts.VersionId })
+                            },
+                            AuthorizationToken.AccessToken
+                        ).Fetch<IEnumerable<TokenSasPrivate>, TusResponse>();
+                    tokenSasList.AddRange(response);
+                }
+                catch (FetchFailedException<TusResponse> ex)
+                {
+                    throw TusHelper.CreateHandledException(ex, group.Key.StoreName, group.Key.ContainerName);
+                }
             }
 
             // Return paths with token Sas.
@@ -446,7 +468,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw TusHelper.CreateHandledException(ex, storeName, containerName, blobName);
             }
         }
 
@@ -465,6 +487,8 @@ namespace TusClientLibrary
         /// <param name="fileUrl">The file url. Url can contains the file version (https://..../container/blobname?versionId=xxxxxxx).</param>
         public void DeleteBlob(string fileUrl, string versionId = null)
         {
+            var fileParts = FileUriParts.Parse(this.BaseAddress, new Uri(this.BaseAddress, fileUrl));
+
             try
             {
                 var fileUri = new Uri(this.BaseAddress, fileUrl);
@@ -479,7 +503,7 @@ namespace TusClientLibrary
             }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw TusHelper.CreateHandledException(ex, fileParts.StoreName, fileParts.ContainerName, fileParts.BlobName);
             }
         }
 
@@ -522,13 +546,9 @@ namespace TusClientLibrary
                 }).Fetch<Token, TusResponse>();
                 return token;
             }
-            catch (FetchFailedException<TusResponse> ex) when (ex.Error?.Error?.Message == "error.LoginFailed")
-            {
-                throw new Exceptions.LoginException(ex.Error?.Error?.Message ?? ex.Message, ex);
-            }
             catch (FetchFailedException<TusResponse> ex)
             {
-                throw new Exceptions.TusHandledException(ex.Error?.Error?.Message ?? ex.Message, ex);
+                throw TusHelper.CreateHandledException(ex);
             }
         }
 

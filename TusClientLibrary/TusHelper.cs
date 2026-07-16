@@ -1,5 +1,6 @@
 ﻿using TusDotNetClientSync = qckdev.Storage.TusDotNetClientSync;
 using System;
+using qckdev.Net.Http;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -56,6 +57,39 @@ namespace TusClientLibrary
                 result = null;
             }
             return result;
+        }
+
+        public static Exceptions.TusHandledException CreateHandledException(
+            FetchFailedException<TusResponse> exception,
+            string storageName = null,
+            string containerName = null,
+            string blobName = null)
+        {
+            var errorCode = exception.Error?.Error?.Message;
+
+            return CreateHandledException(errorCode, exception, storageName, containerName, blobName);
+        }
+
+        internal static Exceptions.TusHandledException CreateHandledException(
+            string errorCode,
+            Exception innerException,
+            string storageName = null,
+            string containerName = null,
+            string blobName = null)
+        {
+            switch (errorCode)
+            {
+                case "error.BlobStorageNotFound":
+                    return new Exceptions.BlobStorageNotFoundException(storageName, innerException);
+                case "error.ContainerNotFound":
+                    return new Exceptions.ContainerNotFoundException(storageName, containerName, innerException);
+                case "error.BlobNotFound":
+                    return new Exceptions.BlobNotFoundException(storageName, containerName, blobName, innerException);
+                case "error.LoginFailed":
+                    return new Exceptions.LoginException(errorCode, innerException);
+                default:
+                    return new Exceptions.TusHandledException(errorCode ?? innerException.Message, innerException);
+            }
         }
 
     }

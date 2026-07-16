@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFrameworks>net6.0;netcoreapp3.1</TargetFrameworks>
-    <Version>3.4.1-alpha</Version>
-    <AssemblyVersion>3.4.1.0</AssemblyVersion>
+    <Version>3.5.0-alpha</Version>
+    <AssemblyVersion>3.5.0.0</AssemblyVersion>
     <Nullable>enable</Nullable>
     <Authors>hfrances</Authors>
     <PackageProjectUrl>https://github.com/hfrances/TusWebApplication</PackageProjectUrl>
