@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFrameworks>net6.0;netcoreapp3.1;net461;net451;net35</TargetFrameworks>
+    <TargetFrameworks>net6.0;netcoreapp3.1;net461;$(net451);$(net35)</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)'=='net451' or '$(TargetFramework)'=='net45' or '$(TargetFramework)'=='net40' or '$(TargetFramework)'=='net35'">
@@ -21,7 +21,6 @@
     <PackageReference Include="Mime" Version="3.7.0" />
     <PackageReference Include="qckdev" Version="0.4.0-beta" />
   </ItemGroup>
-
 
   <ItemGroup>
     <ProjectReference Include="..\TusClientLibrary\TusClientLibrary.csproj" />
