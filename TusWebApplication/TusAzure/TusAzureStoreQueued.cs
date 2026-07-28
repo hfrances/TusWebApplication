@@ -150,7 +150,7 @@ namespace TusWebApplication.TusAzure
                         blob.GetHashCode();
                         var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
                         uri.ToString();
-                        Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                        Blobs.TryRemove(blobInfo.FileId, out _); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
                     }
                 }
                 catch (Azure.RequestFailedException ex)

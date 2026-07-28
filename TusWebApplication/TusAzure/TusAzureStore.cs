@@ -3,6 +3,7 @@ using Azure.Storage.Blobs.Specialized;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -20,7 +21,7 @@ namespace TusWebApplication.TusAzure
         protected IHttpContextAccessor HttpContextAccessor { get; }
         protected ILogger Logger { get; }
 
-        public Dictionary<string, BlobInfo> Blobs { get; } = new Dictionary<string, BlobInfo>();
+        public ConcurrentDictionary<string, BlobInfo> Blobs { get; } = new ConcurrentDictionary<string, BlobInfo>();
 
 
         public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
@@ -117,7 +118,7 @@ namespace TusWebApplication.TusAzure
                                 blob.GetHashCode();
                                 var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
                                 uri.ToString();
-                                Blobs.Remove(blobInfo.FileId); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                                Blobs.TryRemove(blobInfo.FileId, out _); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
                             }
                         }
                         catch (Exception ex)
@@ -201,12 +202,18 @@ namespace TusWebApplication.TusAzure
                     }
 
                     // Create blob.
-                    Blobs.Add(blobId, new BlobInfo(blobId, blob.BlobContainerName, blob.Name, fileName, metadata, uploadLength, useQueueAsync, blob)
+                    var blobInfo = new BlobInfo(blobId, blob.BlobContainerName, blob.Name, fileName, metadata, uploadLength, useQueueAsync, blob)
                     {
                         ContentType = TusAzureHelper.GetContentType(properties.ContentType, properties.ContentTypeAuto, properties.FileName),
                         ContentLanguage = properties.ContentLanguage,
                         ValidateHash = properties.Hash
-                    });
+                    };
+
+                    if (!Blobs.TryAdd(blobId, blobInfo))
+                    {
+                        blobInfo.Dispose();
+                        throw new Exceptions.BlobAlreadyExistsException(this.StoreName, blobId);
+                    }
                     return blobId;
                 }
             }
