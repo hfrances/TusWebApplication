@@ -3,7 +3,6 @@ using Azure.Storage.Blobs.Specialized;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -18,26 +17,27 @@ namespace TusWebApplication.TusAzure
 
         protected Azure.Storage.Blobs.BlobServiceClient BlobService { get; }
         protected string DefaultContainer { get; }
+        protected IBlobUploadStore BlobUploadStore { get; }
         protected IHttpContextAccessor HttpContextAccessor { get; }
         protected ILogger Logger { get; }
 
-        public ConcurrentDictionary<string, BlobInfo> Blobs { get; } = new ConcurrentDictionary<string, BlobInfo>();
 
-
-        public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
+        public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
         {
             this.StoreName = storeName;
             this.BlobService = TusAzureHelper.CreateBlobServiceClient(accountName, accountKey);
             this.DefaultContainer = defaultContainer;
+            this.BlobUploadStore = blobUploadStore;
             this.HttpContextAccessor = httpContextAccessor;
             this.Logger = logger;
         }
 
-        public TusAzureStore(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
+        public TusAzureStore(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
         {
             this.StoreName = storeName;
             this.BlobService = blobService;
             this.DefaultContainer = defaultContainer;
+            this.BlobUploadStore = blobUploadStore;
             this.HttpContextAccessor = httpContextAccessor;
             this.Logger = logger;
         }
@@ -47,7 +47,12 @@ namespace TusWebApplication.TusAzure
 
         public virtual async Task<long> AppendDataAsync(string fileId, Stream stream, CancellationToken cancellationToken)
         {
-            var blobInfo = Blobs[fileId];
+            var blobInfo = await BlobUploadStore.GetAsync(this.StoreName, fileId, cancellationToken);
+
+            if (blobInfo == null)
+            {
+                throw new KeyNotFoundException($"FileId '{fileId}' not found.");
+            }
 
             // Iniciar el contador de tiempo.
             if (blobInfo.StartTime == null)
@@ -118,7 +123,7 @@ namespace TusWebApplication.TusAzure
                                 blob.GetHashCode();
                                 var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
                                 uri.ToString();
-                                Blobs.TryRemove(blobInfo.FileId, out _); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                                await BlobUploadStore.TryRemoveAsync(this.StoreName, blobInfo.FileId, cancellationToken); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
                             }
                         }
                         catch (Exception ex)
@@ -209,7 +214,7 @@ namespace TusWebApplication.TusAzure
                         ValidateHash = properties.Hash
                     };
 
-                    if (!Blobs.TryAdd(blobId, blobInfo))
+                    if (!await BlobUploadStore.TryAddAsync(this.StoreName, blobInfo, cancellationToken))
                     {
                         blobInfo.Dispose();
                         throw new Exceptions.BlobAlreadyExistsException(this.StoreName, blobId);
@@ -219,11 +224,12 @@ namespace TusWebApplication.TusAzure
             }
         }
 
-        public Task<bool> FileExistAsync(string fileId, CancellationToken cancellationToken)
+        public async Task<bool> FileExistAsync(string fileId, CancellationToken cancellationToken)
         {
             bool rdo;
+            var blobInfo = await BlobUploadStore.GetAsync(this.StoreName, fileId, cancellationToken);
 
-            if (Blobs.TryGetValue(fileId, out BlobInfo? blobInfo))
+            if (blobInfo != null)
             {
                 var container = BlobService.GetBlobContainerClient(blobInfo.ContainerName);
                 var blob = container.GetBlobClient(fileId);
@@ -234,14 +240,15 @@ namespace TusWebApplication.TusAzure
             {
                 rdo = false;
             }
-            return Task.FromResult(rdo);
+            return rdo;
         }
 
-        public Task<long?> GetUploadLengthAsync(string fileId, CancellationToken cancellationToken)
+        public async Task<long?> GetUploadLengthAsync(string fileId, CancellationToken cancellationToken)
         {
             long? length;
+            var blob = await BlobUploadStore.GetAsync(this.StoreName, fileId, cancellationToken);
 
-            if (Blobs.TryGetValue(fileId, out BlobInfo? blob))
+            if (blob != null)
             {
                 length = blob.UploadLength;
             }
@@ -249,17 +256,29 @@ namespace TusWebApplication.TusAzure
             {
                 length = null;
             }
-            return Task.FromResult(length);
+            return length;
         }
 
-        public Task<string> GetUploadMetadataAsync(string fileId, CancellationToken cancellationToken)
+        public async Task<string> GetUploadMetadataAsync(string fileId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Blobs[fileId].Metadata);
+            var blobInfo = await BlobUploadStore.GetAsync(this.StoreName, fileId, cancellationToken);
+
+            if (blobInfo == null)
+            {
+                throw new KeyNotFoundException($"FileId '{fileId}' not found.");
+            }
+            return blobInfo.Metadata;
         }
 
-        public Task<long> GetUploadOffsetAsync(string fileId, CancellationToken cancellationToken)
+        public async Task<long> GetUploadOffsetAsync(string fileId, CancellationToken cancellationToken)
         {
-            return Task.FromResult(Blobs[fileId].SizeOffset);
+            var blobInfo = await BlobUploadStore.GetAsync(this.StoreName, fileId, cancellationToken);
+
+            if (blobInfo == null)
+            {
+                throw new KeyNotFoundException($"FileId '{fileId}' not found.");
+            }
+            return blobInfo.SizeOffset;
         }
 
         public Task<ITusFile> GetFileAsync(string fileId, CancellationToken cancellationToken)

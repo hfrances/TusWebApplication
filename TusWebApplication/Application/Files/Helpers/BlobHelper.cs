@@ -72,7 +72,7 @@ namespace TusWebApplication.Application.Files.Helpers
             Func<BlobStatus?, BlobContainerClient, BlobClient?, CancellationToken, Task<TResult>> action,
             CancellationToken cancellationToken = default)
         {
-            var internalBlob = tusAzureBlobManager.GetBlobStatus(storeName, container.Name, blobName);
+            var internalBlob = await tusAzureBlobManager.GetBlobStatusAsync(storeName, container.Name, blobName, cancellationToken);
 
             // Obtener el blob.
             if (internalBlob == null || internalBlob.Status == BlobStatus.UploadStatus.Done)

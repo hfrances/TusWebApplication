@@ -1,66 +1,60 @@
-﻿using System;
-using System.Collections.Generic;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace TusWebApplication.TusAzure
 {
     sealed class BlobManager : IBlobManager
     {
 
-        TusAzureStoreDictionary TusAzureStores { get; }
+        IBlobUploadStore BlobUploadStore { get; }
 
 
-        public BlobManager(TusAzureStoreDictionary tusAzureStores)
+        public BlobManager(IBlobUploadStore blobUploadStore)
         {
-            this.TusAzureStores = tusAzureStores;
+            this.BlobUploadStore = blobUploadStore;
         }
 
-        public BlobStatus? GetBlobStatus(string storeName, string container, string blobName)
+        public async Task<BlobStatus?> GetBlobStatusAsync(string storeName, string container, string blobName, CancellationToken cancellationToken)
         {
             BlobStatus? rdo;
+            string blobId = $"{container}/{blobName}";
+            var blobInfo = await BlobUploadStore.GetAsync(storeName, blobId, cancellationToken);
 
-            if (TusAzureStores.TryGetValue(storeName, out TusAzureStore? store))
+            if (blobInfo != null)
             {
-                string blobId = $"{container}/{blobName}";
-
-                if (store.Blobs.TryGetValue(blobId, out BlobInfo? blobInfo))
+                rdo = new BlobStatus
                 {
-                    rdo = new BlobStatus
-                    {
-                        BlobId = blobInfo.FileId,
-                        Name = blobInfo.FileName,
-                        Length = blobInfo.UploadLength,
-                        LocalChunks = blobInfo.QueuePosition,
-                        LocalLength = blobInfo.SizeOffset,
-                        RemoteChunks = blobInfo.QueueCount,
-                        RemoteLength = blobInfo.SizeOffsetInternal,
-                        RemotePercentage = Math.Round(blobInfo.SizeOffsetInternal * 1D / blobInfo.UploadLength, 2),
-                    };
+                    BlobId = blobInfo.FileId,
+                    Name = blobInfo.FileName,
+                    Length = blobInfo.UploadLength,
+                    LocalChunks = blobInfo.QueuePosition,
+                    LocalLength = blobInfo.SizeOffset,
+                    RemoteChunks = blobInfo.QueueCount,
+                    RemoteLength = blobInfo.SizeOffsetInternal,
+                    RemotePercentage = Math.Round(blobInfo.SizeOffsetInternal * 1D / blobInfo.UploadLength, 2),
+                };
 
-                    if (blobInfo.Done)
+                if (blobInfo.Done)
+                {
+                    if (blobInfo.Error == null)
                     {
-                        if (blobInfo.Error == null)
-                        {
-                            rdo.Status = BlobStatus.UploadStatus.Done;
-                        }
-                        else
-                        {
-                            rdo.Status = BlobStatus.UploadStatus.Error;
-                            rdo.ErrorDescripton = blobInfo.Error.Message;
-                        }
+                        rdo.Status = BlobStatus.UploadStatus.Done;
                     }
                     else
                     {
-                        rdo.Status = BlobStatus.UploadStatus.Uploading;
+                        rdo.Status = BlobStatus.UploadStatus.Error;
+                        rdo.ErrorDescripton = blobInfo.Error.Message;
                     }
                 }
                 else
                 {
-                    rdo = null; // BlobId not found.
+                    rdo.Status = BlobStatus.UploadStatus.Uploading;
                 }
             }
             else
             {
-                throw new KeyNotFoundException($"Store not found: '{storeName}'.");
+                rdo = null; // BlobId not found.
             }
             return rdo;
         }

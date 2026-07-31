@@ -1,9 +1,12 @@
-﻿namespace TusWebApplication.TusAzure
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace TusWebApplication.TusAzure
 {
     interface IBlobManager
     {
 
-        BlobStatus? GetBlobStatus(string storeName, string container, string blobName);
+        Task<BlobStatus?> GetBlobStatusAsync(string storeName, string container, string blobName, CancellationToken cancellationToken);
 
     }
 }

@@ -26,10 +26,12 @@ namespace TusWebApplication.TusAzure
         public static IServiceCollection AddTusAzure(this IServiceCollection services)
         {
 
+            services.AddSingleton<IBlobUploadStore, BlobUploadMemoryStore>();
             services.AddSingleton(factory =>
             {
                 var tusAzureStores = new TusAzureStoreDictionary();
                 var settings = factory.GetService<IOptions<AzureBlobProvider.AzureStorageCredentialsSettings>>()?.Value;
+                var blobUploadStore = factory.GetRequiredService<IBlobUploadStore>();
 
                 if (settings != null)
                 {
@@ -50,6 +52,7 @@ namespace TusWebApplication.TusAzure
                                 pair.Value.AccountName ?? string.Empty,
                                 pair.Value.AccountKey ?? string.Empty,
                                 pair.Value.DefaultContainer ?? string.Empty,
+                                blobUploadStore,
                                 httpContextAccesor, logger
                             ));
                         }
@@ -61,6 +64,7 @@ namespace TusWebApplication.TusAzure
                                 pair.Value.AccountName ?? string.Empty,
                                 pair.Value.AccountKey ?? string.Empty,
                                 pair.Value.DefaultContainer ?? string.Empty,
+                                blobUploadStore,
                                 httpContextAccesor, logger
                             ));
                         }

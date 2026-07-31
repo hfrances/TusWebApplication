@@ -59,7 +59,7 @@ namespace TusWebApplication.Application.Files.Handlers
 
                             if (useSas)
                             {
-                                var internalBlob = TusAzureBlobManager.GetBlobStatus(request.StoreName, container.Name, item.BlobName);
+                                var internalBlob = await TusAzureBlobManager.GetBlobStatusAsync(request.StoreName, container.Name, item.BlobName, cancellationToken);
 
                                 if (internalBlob != null && internalBlob.Status != TusAzure.BlobStatus.UploadStatus.Done)
                                 {

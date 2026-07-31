@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -13,12 +14,12 @@ namespace TusWebApplication.TusAzure
     sealed class TusAzureStoreQueued : TusAzureStore, ITusStore, ITusCreationStore, ITusTerminationStore, ITusReadableStore
     {
 
-        public TusAzureStoreQueued(string storeName, string accountName, string accountKey, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
-            : base(storeName, accountName, accountKey, defaultContainer, httpContextAccessor, logger)
+        public TusAzureStoreQueued(string storeName, string accountName, string accountKey, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
+            : base(storeName, accountName, accountKey, defaultContainer, blobUploadStore, httpContextAccessor, logger)
         { }
 
-        public TusAzureStoreQueued(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IHttpContextAccessor httpContextAccessor, ILogger logger)
-            : base(storeName, blobService, defaultContainer, httpContextAccessor, logger)
+        public TusAzureStoreQueued(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
+            : base(storeName, blobService, defaultContainer, blobUploadStore, httpContextAccessor, logger)
         { }
 
         public override async Task<long> AppendDataAsync(string fileId, Stream stream, CancellationToken cancellationToken)
@@ -27,7 +28,12 @@ namespace TusWebApplication.TusAzure
             try
             {
                 var threadId = Guid.NewGuid().ToString()[..8];
-                var blobInfo = Blobs[fileId];
+                var blobInfo = await BlobUploadStore.GetAsync(this.StoreName, fileId, cancellationToken);
+
+                if (blobInfo == null)
+                {
+                    throw new KeyNotFoundException($"FileId '{fileId}' not found.");
+                }
                 var blockId = $"{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(blobInfo.BlockNames.Count.ToString("d6")))}";
                 long length = 0;
 
@@ -150,7 +156,7 @@ namespace TusWebApplication.TusAzure
                         blob.GetHashCode();
                         var uri = blob.GenerateSasUri(Azure.Storage.Sas.BlobSasPermissions.Read, DateTimeOffset.UtcNow.AddMinutes(12));
                         uri.ToString();
-                        Blobs.TryRemove(blobInfo.FileId, out _); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
+                        await BlobUploadStore.TryRemoveAsync(this.StoreName, blobInfo.FileId, cancellationToken); // Solamente quitar si fue todo bien. En caso contrario se quedará a modo de histórico.
                     }
                 }
                 catch (Azure.RequestFailedException ex)
