@@ -17,5 +17,10 @@ namespace TusWebApplication.AzureBlobProvider
         /// </summary>
         public bool CanUploadAsync { get; set; } = true;
 
+        /// <summary>
+        /// Gets or sets if the store can only be queried and downloaded from. Default value is false.
+        /// </summary>
+        public bool ReadOnly { get; set; } = false;
+
     }
 }

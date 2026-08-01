@@ -24,6 +24,8 @@ namespace TusWebApplication.Application.Files.Handlers
         {
             if (AzureSettings.TryGetValue(request.StoreName, out AzureBlobProvider.AzureStorageCredentialSettings? settings))
             {
+                TusWebApplication.Application.Files.Helpers.StoreAccessHelper.EnsureWritable(settings);
+
                 var blobService = AzureBlobProvider.AzureBlobHelper.CreateBlobServiceClient(
                     settings.AccountName, settings.AccountKey
                 );

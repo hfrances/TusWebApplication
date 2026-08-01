@@ -67,6 +67,32 @@ namespace TusClientLibrary.Test
         }
 
         [TestMethod]
+        public void CreateHandledException_ReadOnlyStore()
+        {
+            const string errorCode = "error.ReadOnlyStore";
+
+            var exception = TusHelper.CreateHandledException(
+                errorCode, new Exception(), STORAGE_NAME, CONTAINER_NAME, BLOB_NAME);
+
+            Assert.IsInstanceOfType(exception, typeof(ReadOnlyStoreException));
+            var typedException = (ReadOnlyStoreException)exception;
+            Assert.AreEqual(STORAGE_NAME, typedException.StorageName);
+            StringAssert.Contains(exception.Message, STORAGE_NAME);
+            StringAssert.Contains(exception.Message, "read-only");
+        }
+
+        [TestMethod]
+        public void CreateHandledException_TusReadOnlyStoreResponse()
+        {
+            var response = TusHelper.ParseResponse("{\"error\":{\"message\":\"error.ReadOnlyStore\"}}");
+            var exception = TusHelper.CreateHandledException(
+                response.Error.Message, new Exception(), STORAGE_NAME);
+
+            Assert.IsInstanceOfType(exception, typeof(ReadOnlyStoreException));
+            Assert.AreEqual(STORAGE_NAME, ((ReadOnlyStoreException)exception).StorageName);
+        }
+
+        [TestMethod]
         public void CreateHandledException_UnknownError()
         {
             const string errorCode = "error.Unknown";

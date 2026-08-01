@@ -87,6 +87,8 @@ namespace TusClientLibrary
                     return new Exceptions.BlobNotFoundException(storageName, containerName, blobName, innerException);
                 case "error.LoginFailed":
                     return new Exceptions.LoginException(errorCode, innerException);
+                case "error.ReadOnlyStore":
+                    return new Exceptions.ReadOnlyStoreException(storageName, innerException);
                 default:
                     return new Exceptions.TusHandledException(errorCode ?? innerException.Message, innerException);
             }

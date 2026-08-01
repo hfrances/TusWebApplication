@@ -21,10 +21,13 @@ namespace TusWebApplication.TusAzure
         protected IHttpContextAccessor HttpContextAccessor { get; }
         protected ILogger Logger { get; }
 
+        public bool IsReadOnly { get; }
 
-        public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
+
+        public TusAzureStore(string storeName, string accountName, string accountKey, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger, bool isReadOnly = false)
         {
             this.StoreName = storeName;
+            this.IsReadOnly = isReadOnly;
             this.BlobService = TusAzureHelper.CreateBlobServiceClient(accountName, accountKey);
             this.DefaultContainer = defaultContainer;
             this.BlobUploadStore = blobUploadStore;
@@ -32,9 +35,10 @@ namespace TusWebApplication.TusAzure
             this.Logger = logger;
         }
 
-        public TusAzureStore(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
+        public TusAzureStore(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger, bool isReadOnly = false)
         {
             this.StoreName = storeName;
+            this.IsReadOnly = isReadOnly;
             this.BlobService = blobService;
             this.DefaultContainer = defaultContainer;
             this.BlobUploadStore = blobUploadStore;

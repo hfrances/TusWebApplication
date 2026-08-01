@@ -78,13 +78,13 @@ namespace TusClientLibrary
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
+                throw TusHelper.CreateHandledException(response?.Error?.Message, tusex, StoreName);
             }
             catch (TusDotNetClientSync.TusException tusex)
             {
                 var response = TusHelper.ParseResponse(tusex.ResponseContent);
 
-                throw new Exceptions.TusHandledException(response?.Error?.Message ?? tusex.Message, tusex);
+                throw TusHelper.CreateHandledException(response?.Error?.Message, tusex, StoreName);
             }
         }
 

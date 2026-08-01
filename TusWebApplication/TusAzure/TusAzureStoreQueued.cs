@@ -14,12 +14,12 @@ namespace TusWebApplication.TusAzure
     sealed class TusAzureStoreQueued : TusAzureStore, ITusStore, ITusCreationStore, ITusTerminationStore, ITusReadableStore
     {
 
-        public TusAzureStoreQueued(string storeName, string accountName, string accountKey, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
-            : base(storeName, accountName, accountKey, defaultContainer, blobUploadStore, httpContextAccessor, logger)
+        public TusAzureStoreQueued(string storeName, string accountName, string accountKey, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger, bool isReadOnly = false)
+            : base(storeName, accountName, accountKey, defaultContainer, blobUploadStore, httpContextAccessor, logger, isReadOnly)
         { }
 
-        public TusAzureStoreQueued(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger)
-            : base(storeName, blobService, defaultContainer, blobUploadStore, httpContextAccessor, logger)
+        public TusAzureStoreQueued(string storeName, Azure.Storage.Blobs.BlobServiceClient blobService, string defaultContainer, IBlobUploadStore blobUploadStore, IHttpContextAccessor httpContextAccessor, ILogger logger, bool isReadOnly = false)
+            : base(storeName, blobService, defaultContainer, blobUploadStore, httpContextAccessor, logger, isReadOnly)
         { }
 
         public override async Task<long> AppendDataAsync(string fileId, Stream stream, CancellationToken cancellationToken)

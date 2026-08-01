@@ -53,7 +53,8 @@ namespace TusWebApplication.TusAzure
                                 pair.Value.AccountKey ?? string.Empty,
                                 pair.Value.DefaultContainer ?? string.Empty,
                                 blobUploadStore,
-                                httpContextAccesor, logger
+                                httpContextAccesor, logger,
+                                pair.Value.ReadOnly
                             ));
                         }
                         else
@@ -65,7 +66,8 @@ namespace TusWebApplication.TusAzure
                                 pair.Value.AccountKey ?? string.Empty,
                                 pair.Value.DefaultContainer ?? string.Empty,
                                 blobUploadStore,
-                                httpContextAccesor, logger
+                                httpContextAccesor, logger,
+                                pair.Value.ReadOnly
                             ));
                         }
                     }
@@ -141,7 +143,7 @@ namespace TusWebApplication.TusAzure
             return rdo;
         }
 
-        static Task<DefaultTusConfiguration> TusConfigurationFactory(HttpContext httpContext, tusdotnet.Interfaces.ITusStore tusStore)
+        static Task<DefaultTusConfiguration> TusConfigurationFactory(HttpContext httpContext, TusAzureStore tusStore)
         {
             var logger = httpContext.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger<Program>();
 
@@ -155,6 +157,16 @@ namespace TusWebApplication.TusAzure
                     OnAuthorizeAsync = async ctx =>
                     {
                         await Authentication.TusAuthenticationHelper.AuthorizeAsync(ctx.HttpContext, Authentication.Constants.UPLOAD_FILE_SCHEMA);
+
+                        if (tusStore.IsReadOnly &&
+                            (ctx.Intent == IntentType.CreateFile ||
+                             ctx.Intent == IntentType.ConcatenateFiles ||
+                             ctx.Intent == IntentType.WriteFile ||
+                             ctx.Intent == IntentType.DeleteFile))
+                        {
+                            ctx.FailRequest(HttpStatusCode.Forbidden, "error.ReadOnlyStore");
+                            return;
+                        }
 
                         //bool enableAuthorize = false;
 
